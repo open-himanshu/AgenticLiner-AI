@@ -3,10 +3,11 @@ AgenticLiner FastAPI Main Application (University Edition v2.1).
 Complete End-to-End Implementation for all 7 Modules and 17 Screens of SparkX 3.0 Challenge #1.
 """
 
-from fastapi import FastAPI, Request, Form, HTTPException, Response
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi import FastAPI, Request, Form, HTTPException, Response, Depends, status
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from pathlib import Path
@@ -25,8 +26,10 @@ from backend.modules.module4_participant_xp.recommender import ParticipantExperi
 from backend.modules.module5_comm_agent.agent import CommunicationAgent
 from backend.modules.module6_feedback.analyzer import FeedbackAnalyzer
 from backend.modules.module7_analytics.generator import EventAnalyticsEngine
+from backend.api.auth_routes import router as auth_router, ROLE_DASHBOARDS
+from backend.api.dependencies import require_auth, require_role, get_session_user
 
-app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.1.0")
+app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
 
 # Setup Directories
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -35,6 +38,39 @@ STATIC_DIR = BASE_DIR / "frontend" / "static"
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Session Middleware Configuration
+SECRET_KEY = os.getenv("SECRET_KEY", "agenticliner_super_secret_session_key_2026_galgotias_sparkx")
+SESSION_COOKIE = os.getenv("SESSION_COOKIE_NAME", "agenticliner_session")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    session_cookie=SESSION_COOKIE,
+    max_age=86400,
+    same_site="lax"
+)
+
+# Include Authentication Router
+app.include_router(auth_router)
+
+# Custom Exception Handlers for Strict RBAC & Unauthenticated Redirects
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    accept = request.headers.get("accept", "")
+    if exc.status_code == 403:
+        if "text/html" in accept:
+            return templates.TemplateResponse(
+                request=request,
+                name="errors/403.html",
+                context={"detail": exc.detail},
+                status_code=403
+            )
+        return JSONResponse(status_code=403, content={"detail": exc.detail})
+    elif exc.status_code in (401, 307):
+        if "text/html" in accept:
+            return RedirectResponse(url=f"/login?next={request.url.path}", status_code=status.HTTP_302_FOUND)
+        return JSONResponse(status_code=401, content={"detail": exc.detail})
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 # Core Engines
 autopilot_agent = AutopilotAgent()
@@ -87,11 +123,88 @@ class CertificateGenerateRequest(BaseModel):
     event_id: str = "ev_001"
     event_name: str = "Galgotias Campus Innovation Hackathon"
 
-# --- HTML Page Routes (Server-rendered Jinja2 UI) ---
+# --- HTML Page Routes with Strict RBAC (Server-rendered Jinja2 UI) ---
 
 @app.get("/", response_class=HTMLResponse)
-async def home_page(request: Request):
-    """Event Planning Copilot & Logistics Inventory"""
+async def root_gateway(request: Request):
+    """Root Gateway: Redirects to role dashboard if authenticated, else /login."""
+    user = get_session_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    target = ROLE_DASHBOARDS.get(user.get("role"), "/login")
+    return RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)
+
+@app.get("/supervisor", response_class=HTMLResponse)
+async def supervisor_dashboard(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["supervisor"]))
+):
+    """Supervisor Dashboard: University Admin & Dean Authority"""
+    pending_count = fetch_one("SELECT count(*) as count FROM events WHERE approval_status = 'pending_dean_approval'")["count"]
+    active_count = fetch_one("SELECT count(*) as count FROM events WHERE status IN ('allocated', 'approved', 'booked')")["count"]
+    rooms_count = fetch_one("SELECT count(*) as count FROM rooms")["count"]
+    resources_count = fetch_one("SELECT count(*) as count FROM resources")["count"]
+    pending_events = fetch_all("SELECT * FROM events WHERE approval_status = 'pending_dean_approval' ORDER BY created_at DESC LIMIT 10")
+
+    return templates.TemplateResponse(
+        request=request,
+        name="supervisor.html",
+        context={
+            "user": user,
+            "pending_count": pending_count,
+            "active_count": active_count,
+            "rooms_count": rooms_count,
+            "resources_count": resources_count,
+            "pending_events": pending_events
+        }
+    )
+
+@app.get("/supervisor/audit-log", response_class=HTMLResponse)
+async def supervisor_audit_log(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["supervisor"]))
+):
+    """Supervisor View: Immutable System Audit Trail"""
+    logs = fetch_all("SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT 100")
+    return templates.TemplateResponse(
+        request=request,
+        name="supervisor.html",
+        context={
+            "user": user,
+            "audit_logs": logs,
+            "show_audit": True
+        }
+    )
+
+@app.get("/organiser", response_class=HTMLResponse)
+async def organiser_dashboard(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser"]))
+):
+    """Organiser Dashboard: Club Event Host Hub"""
+    my_events_count = fetch_one("SELECT count(*) as count FROM events")["count"]
+    total_reg = fetch_one("SELECT count(*) as count FROM registrations WHERE status = 'confirmed'")["count"]
+    waitlisted = fetch_one("SELECT count(*) as count FROM registrations WHERE status = 'waitlisted'")["count"]
+    outbox_count = fetch_one("SELECT count(*) as count FROM outbox WHERE status = 'held'")["count"]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="organiser.html",
+        context={
+            "user": user,
+            "my_events_count": my_events_count,
+            "total_registered": total_reg,
+            "waitlisted_count": waitlisted,
+            "outbox_count": outbox_count
+        }
+    )
+
+@app.get("/organiser/planner", response_class=HTMLResponse)
+async def organiser_planner(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser"]))
+):
+    """Organiser Event Planning Copilot & Logistics Inventory Cart"""
     catalog = fetch_all("SELECT * FROM resources")
     rooms = fetch_all("SELECT * FROM rooms")
     events = fetch_all("SELECT * FROM events ORDER BY created_at DESC LIMIT 5")
@@ -100,6 +213,7 @@ async def home_page(request: Request):
         request=request,
         name="index.html",
         context={
+            "user": user,
             "catalog": catalog,
             "rooms": rooms,
             "events": events,
@@ -107,17 +221,46 @@ async def home_page(request: Request):
         }
     )
 
+@app.get("/data-manager", response_class=HTMLResponse)
+async def data_manager_dashboard(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["data_manager"]))
+):
+    """Data Manager Dashboard: Master CSV Datasets & Campus Records"""
+    venues_count = fetch_one("SELECT count(*) as count FROM rooms")["count"]
+    equipment_count = fetch_one("SELECT count(*) as count FROM resources")["count"]
+    speakers_count = fetch_one("SELECT count(*) as count FROM speakers")["count"]
+    past_events_count = fetch_one("SELECT count(*) as count FROM historical_events")["count"]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="data_manager.html",
+        context={
+            "user": user,
+            "venues_count": venues_count,
+            "equipment_count": equipment_count,
+            "speakers_count": speakers_count,
+            "past_events_count": past_events_count
+        }
+    )
+
 @app.get("/autopilot", response_class=HTMLResponse)
-async def autopilot_page(request: Request):
+async def autopilot_page(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Hero Screen: Autopilot Agent Activity Panel (Live Timeline)"""
     return templates.TemplateResponse(
         request=request,
         name="autopilot.html",
-        context={}
+        context={"user": user}
     )
 
 @app.get("/schedule", response_class=HTMLResponse)
-async def schedule_page(request: Request):
+async def schedule_page(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor", "participant"]))
+):
     """OR-Tools Timetable Grid & Hero Speaker-Cancellation Demo"""
     rooms = fetch_all("SELECT * FROM rooms")
     speakers = fetch_all("SELECT * FROM speakers")
@@ -125,13 +268,17 @@ async def schedule_page(request: Request):
         request=request,
         name="schedule.html",
         context={
+            "user": user,
             "rooms": rooms,
             "speakers": speakers
         }
     )
 
 @app.get("/attendees", response_class=HTMLResponse)
-async def attendees_page(request: Request):
+async def attendees_page(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Screen #9: Attendee Management & Automatic Waitlist Engine"""
     attendees = fetch_all("""
         SELECT r.id, s.name, s.email, s.department, s.year, r.status, r.registered_at
@@ -142,30 +289,37 @@ async def attendees_page(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="attendees.html",
-        context={"attendees": attendees}
+        context={"user": user, "attendees": attendees}
     )
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
     """Screen #8: Public Student Registration Portal"""
+    user = get_session_user(request)
     return templates.TemplateResponse(
         request=request,
         name="register.html",
-        context={}
+        context={"user": user}
     )
 
 @app.get("/notices", response_class=HTMLResponse)
-async def notices_page(request: Request):
+async def notices_page(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Screen #12: Outbox Notification Center"""
     notices = fetch_all("SELECT * FROM outbox ORDER BY created_at DESC")
     return templates.TemplateResponse(
         request=request,
         name="notices.html",
-        context={"notices": notices}
+        context={"user": user, "notices": notices}
     )
 
 @app.get("/participant", response_class=HTMLResponse)
-async def participant_page(request: Request):
+async def participant_page(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["participant", "supervisor"]))
+):
     """Personalized Recommendations, Clash-Free Agenda & Grounded Assistant"""
     students = fetch_all("SELECT id, name, department, interests FROM students LIMIT 20")
     events = fetch_all("SELECT id, name FROM events")
@@ -173,15 +327,24 @@ async def participant_page(request: Request):
         request=request,
         name="participant.html",
         context={
+            "user": user,
             "students": students,
             "events": events
         }
     )
 
 @app.get("/analytics", response_class=HTMLResponse)
-async def analytics_page(request: Request):
+async def analytics_page(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["supervisor", "organiser"]))
+):
     """Feedback Insights, Post-Event Attendance Metrics & Verifiable Credentials"""
     events = fetch_all("SELECT id, name FROM events")
+    return templates.TemplateResponse(
+        request=request,
+        name="analytics.html",
+        context={"user": user, "events": events}
+    )
     return templates.TemplateResponse(
         request=request,
         name="analytics.html",

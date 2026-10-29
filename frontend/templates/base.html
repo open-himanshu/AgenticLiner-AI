@@ -84,7 +84,8 @@
     <!-- Top Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3">
         <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+            {% set user = request.session.get('user') %}
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{% if user %}{% if user.role == 'supervisor' %}/supervisor{% elif user.role == 'organiser' %}/organiser{% elif user.role == 'data_manager' %}/data-manager{% else %}/participant{% endif %}{% else %}/login{% endif %}">
                 <span class="fs-4">🚀 AgenticLiner</span>
                 <span class="badge badge-kavach py-1 px-2">🛡️ Kavach Protected</span>
             </a>
@@ -92,32 +93,72 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navMain">
-                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 gap-1 small">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.url.path == '/' %}active fw-bold{% endif %}" href="/"><i class="bi bi-shop me-1"></i> Planner</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.url.path == '/autopilot' %}active fw-bold text-warning{% endif %}" href="/autopilot"><i class="bi bi-cpu me-1"></i> Autopilot</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.url.path == '/schedule' %}active fw-bold{% endif %}" href="/schedule"><i class="bi bi-calendar3 me-1"></i> Timetable</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.url.path == '/attendees' %}active fw-bold{% endif %}" href="/attendees"><i class="bi bi-people me-1"></i> Attendees</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.url.path == '/register' %}active fw-bold{% endif %}" href="/register"><i class="bi bi-pencil-square me-1"></i> Register</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.url.path == '/notices' %}active fw-bold{% endif %}" href="/notices"><i class="bi bi-inbox me-1"></i> Outbox</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.url.path == '/participant' %}active fw-bold{% endif %}" href="/participant"><i class="bi bi-person-badge me-1"></i> Student View</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.url.path == '/analytics' %}active fw-bold{% endif %}" href="/analytics"><i class="bi bi-graph-up me-1"></i> Analytics</a>
-                    </li>
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 small ms-3">
+                    {% if user %}
+                        {% if user.role == 'supervisor' %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/supervisor' %}active fw-bold{% endif %}" href="/supervisor"><i class="bi bi-shield-check me-1"></i> Admin Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/audit' in request.url.path %}active fw-bold{% endif %}" href="/supervisor/audit-log"><i class="bi bi-journal-text me-1"></i> Audit Log</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/analytics' %}active fw-bold{% endif %}" href="/analytics"><i class="bi bi-graph-up me-1"></i> Executive Analytics</a>
+                        </li>
+
+                        {% elif user.role == 'organiser' %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/organiser' %}active fw-bold{% endif %}" href="/organiser"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/organiser/planner' %}active fw-bold{% endif %}" href="/organiser/planner"><i class="bi bi-shop me-1"></i> Planner & Cart</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/schedule' %}active fw-bold{% endif %}" href="/schedule"><i class="bi bi-calendar3 me-1"></i> Timetable</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/attendees' %}active fw-bold{% endif %}" href="/attendees"><i class="bi bi-people me-1"></i> Attendees</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/notices' %}active fw-bold{% endif %}" href="/notices"><i class="bi bi-inbox me-1"></i> Outbox</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/autopilot' %}active fw-bold text-warning{% endif %}" href="/autopilot"><i class="bi bi-cpu me-1"></i> Assistant AI</a>
+                        </li>
+
+                        {% elif user.role == 'data_manager' %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/data-manager' %}active fw-bold{% endif %}" href="/data-manager"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Data Manager & CSV</a>
+                        </li>
+
+                        {% elif user.role == 'participant' %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/participant' %}active fw-bold{% endif %}" href="/participant"><i class="bi bi-person-badge me-1"></i> My Agenda</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.url.path == '/register' %}active fw-bold{% endif %}" href="/register"><i class="bi bi-pencil-square me-1"></i> Register</a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
                 </ul>
+
+                <div class="d-flex align-items-center gap-3">
+                    {% if user %}
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge {% if user.role == 'supervisor' %}bg-danger{% elif user.role == 'organiser' %}bg-primary{% elif user.role == 'data_manager' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %} text-uppercase px-2 py-1" style="font-size: 0.7rem;">
+                            {{ user.role.replace('_', ' ') }}
+                        </span>
+                        <span class="text-white small fw-semibold">{{ user.full_name }}</span>
+                    </div>
+                    <a href="/logout" class="btn btn-sm btn-outline-light py-1 px-3">
+                        <i class="bi bi-box-arrow-right me-1"></i> Logout
+                    </a>
+                    {% else %}
+                    <a href="/login" class="btn btn-sm btn-primary py-1 px-3 fw-semibold">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>

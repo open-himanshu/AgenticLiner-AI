@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Data Manager Dashboard - AgenticLiner{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h2 class="fw-bold mb-0">📁 Campus Data Operations Manager</h2>
+                        <span class="badge bg-warning text-dark">Data Import & Master Records</span>
+                    </div>
+                    <p class="text-muted mb-0">Manage university venue definitions, equipment inventory quotas, guest speaker profiles, and historical event datasets via atomic CSV operations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Overview Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
+                <span class="text-muted small">Campus Venues Loaded</span>
+                <h3 class="fw-bold text-dark mb-0">{{ venues_count or 0 }}</h3>
+                <span class="text-muted small">Active rooms</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-success">
+                <span class="text-muted small">Equipment Items</span>
+                <h3 class="fw-bold text-dark mb-0">{{ equipment_count or 0 }}</h3>
+                <span class="text-muted small">Inventory units</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-info">
+                <span class="text-muted small">Faculty / Speakers</span>
+                <h3 class="fw-bold text-dark mb-0">{{ speakers_count or 0 }}</h3>
+                <span class="text-muted small">Available mentors</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-secondary">
+                <span class="text-muted small">Historical Event Records</span>
+                <h3 class="fw-bold text-dark mb-0">{{ past_events_count or 0 }}</h3>
+                <span class="text-muted small">ML training records</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card card-custom p-4 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-arrow-up text-primary me-2"></i>Atomic CSV Datasets (Phase 4 Ready)</h5>
+                    <span class="badge bg-light text-dark border">Data Management Center</span>
+                </div>
+                <p class="text-muted small">Download pre-formatted campus templates, validate required schema columns, and upload master datasets atomically.</p>
+                
+                <div class="alert alert-info d-flex align-items-center py-2" role="alert">
+                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                    <div class="small">Data Manager CSV Upload & Validation pipeline is actively configured for Phase 4.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

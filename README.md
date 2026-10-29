@@ -46,8 +46,42 @@ AgenticLiner/
 
 ---
 
-## ⚡ Quickstart
+## 🔐 Role-Based Access Control (RBAC) & Seeded Accounts
 
+AgenticLiner enforces strict role-based access control on every route. The seed script (`python backend/services/seed_users.py`) creates exactly **one account per role** with bcrypt password hashing:
+
+| Role | Email Address | Password | Landing Dashboard | Authorized Access |
+|---|---|---|---|---|
+| **Supervisor (University Admin)** | `admin@galgotias.edu` | `Admin@123` | `/supervisor` | Campus event approvals, master calendar, resource limits, audit logs, analytics |
+| **Organiser (Club Host)** | `organiser@galgotias.edu` | `Organiser@123` | `/organiser` | Event planning, catalog cart, OR-Tools timetable, attendee roster, outbox broadcasts, assistant AI |
+| **Data Manager** | `datamanager@galgotias.edu` | `Data@123` | `/data-manager` | CSV uploads & template downloads (venues, equipment, speakers, participants, past events) |
+| **Participant (Student)** | `student@galgotias.edu` | `Student@123` | `/participant` | Event registration, personalized clash-free agenda, QR check-in, feedback submission |
+
+> **Security Note:** Credentials are documented solely in this README and are NOT displayed on the public login UI.
+
+---
+
+## ⚡ Quickstart & Run Instructions
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Configure environment
+copy .env.example .env
+
+# 3. Initialize database & seed role accounts
+python backend/services/seed_users.py
+
+# 4. Run test suite (Auth & RBAC)
+pytest tests/test_auth.py
+
+# 5. Start web server
+python -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000
+```
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser. Unauthenticated requests automatically redirect to `/login`.
+
+---
 1. **Environment Setup:**
    ```bash
    python -m venv venv

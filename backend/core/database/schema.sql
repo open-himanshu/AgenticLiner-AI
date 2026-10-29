@@ -4,6 +4,17 @@
 
 PRAGMA foreign_keys = ON;
 
+-- 0. Users & Authentication
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('supervisor', 'organiser', 'data_manager', 'participant')),
+    full_name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 1. Events Table
 CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,

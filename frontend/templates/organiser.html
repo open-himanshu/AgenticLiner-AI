@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Organiser Dashboard - AgenticLiner{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h2 class="fw-bold mb-0">🎯 Student Club Organiser Dashboard</h2>
+                        <span class="badge bg-primary">Event Host Portal</span>
+                    </div>
+                    <p class="text-muted mb-0">Plan new university fests, requisition campus equipment, manage attendee rosters, and trigger clash-free timetables.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/organiser/planner" class="btn btn-primary fw-bold">
+                        <i class="bi bi-plus-circle me-1"></i> Plan New Event
+                    </a>
+                    <a href="/autopilot" class="btn btn-warning fw-bold">
+                        <i class="bi bi-robot me-1"></i> AI Assistant
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
+                <span class="text-muted small">My Hosted Events</span>
+                <h3 class="fw-bold text-dark mb-0">{{ my_events_count or 0 }}</h3>
+                <span class="text-muted small">Club organized</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-success">
+                <span class="text-muted small">Registered Students</span>
+                <h3 class="fw-bold text-dark mb-0">{{ total_registered or 0 }}</h3>
+                <span class="text-muted small">Across all active sessions</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-warning">
+                <span class="text-muted small">Waitlisted Students</span>
+                <h3 class="fw-bold text-dark mb-0">{{ waitlisted_count or 0 }}</h3>
+                <span class="text-muted small">Auto-promoted on cancel</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-info">
+                <span class="text-muted small">Staged Outbox Notices</span>
+                <h3 class="fw-bold text-dark mb-0">{{ outbox_count or 0 }}</h3>
+                <span class="text-muted small">Held until confirmation</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Access Modules Grid -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card card-custom p-4 bg-white h-100">
+                <h5 class="fw-bold mb-2"><i class="bi bi-shop text-primary me-2"></i>Event Copilot & Requisitions</h5>
+                <p class="text-muted small mb-3">Requisition campus inventory (mics, power strips, catering, sound system) with automatic Dean sign-off routing.</p>
+                <a href="/organiser/planner" class="btn btn-sm btn-outline-primary mt-auto">Open Planner</a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-custom p-4 bg-white h-100">
+                <h5 class="fw-bold mb-2"><i class="bi bi-calendar3 text-success me-2"></i>OR-Tools Timetable</h5>
+                <p class="text-muted small mb-3">Mathematical constraint-based timetable solver. Test the Speaker Cancellation hero demo.</p>
+                <a href="/schedule" class="btn btn-sm btn-outline-success mt-auto">Open Timetable</a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-custom p-4 bg-white h-100">
+                <h5 class="fw-bold mb-2"><i class="bi bi-people text-info me-2"></i>Attendee Management</h5>
+                <p class="text-muted small mb-3">Manage student registrations, conduct physical gate check-in, and download attendance CSV.</p>
+                <a href="/attendees" class="btn btn-sm btn-outline-info mt-auto">Manage Attendees</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
