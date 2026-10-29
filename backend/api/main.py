@@ -36,6 +36,11 @@ from backend.services.pass_service import (
     get_student_passes,
     get_personalized_recommendations_for_student
 )
+from backend.services.schedule_service import (
+    solve_timetable,
+    handle_hero_speaker_cancellation,
+    export_schedule_csv
+)
 from backend.api.dependencies import require_auth, require_role, get_session_user
 
 app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
@@ -333,13 +338,15 @@ async def schedule_page(
     """OR-Tools Timetable Grid & Hero Speaker-Cancellation Demo"""
     rooms = fetch_all("SELECT * FROM rooms")
     speakers = fetch_all("SELECT * FROM speakers")
+    initial_solution = solve_timetable()
     return templates.TemplateResponse(
         request=request,
         name="schedule.html",
         context={
             "user": user,
             "rooms": rooms,
-            "speakers": speakers
+            "speakers": speakers,
+            "initial_solution": initial_solution
         }
     )
 
@@ -595,73 +602,28 @@ async def get_resource_recommendations(event_type: str = "hackathon", headcount:
 async def solve_schedule_api(payload: Optional[Dict[str, Any]] = None):
     """Module 2: Solves conflict-free timetable using Google OR-Tools CP-SAT."""
     payload = payload or {}
-    rooms = fetch_all("SELECT id, name, capacity FROM rooms")
-    if not rooms:
-        rooms = [
-            {"id": "room_01", "name": "Main Auditorium A", "capacity": 300},
-            {"id": "room_02", "name": "Auditorium B", "capacity": 150}
-        ]
-    slots = payload.get("slots", ["09:30-11:00", "11:15-12:45", "13:45-15:15", "15:30-17:00"])
-    sessions = payload.get("sessions", [
-        {"id": "sess_01", "title": "Opening Keynote & Welcome", "expected_attendance": 250, "speaker_id": "spk_04", "depends_on": None},
-        {"id": "sess_02", "title": "Generative AI Systems Masterclass", "expected_attendance": 120, "speaker_id": "spk_01", "depends_on": "sess_01"},
-        {"id": "sess_03", "title": "Deep Learning with PyTorch Workshop", "expected_attendance": 50, "speaker_id": "spk_02", "depends_on": "sess_02"},
-        {"id": "sess_04", "title": "Python for Autonomous Agents", "expected_attendance": 80, "speaker_id": "spk_03", "depends_on": "sess_01"}
-    ])
-
-    scheduler = EventScheduler(rooms=rooms, slots=slots, sessions=sessions)
-    result = scheduler.solve()
+    sessions = payload.get("sessions")
+    slots = payload.get("slots")
+    custom_rooms = payload.get("rooms")
+    result = solve_timetable(sessions=sessions, slots=slots, custom_rooms=custom_rooms)
     return JSONResponse(content=result)
 
 @app.post("/api/schedule/hero-speaker-cancel")
 async def hero_speaker_cancellation_demo():
     """Hero Demo: Speaker cancellation, replacement matching, re-scheduling, and Outbox alert."""
-    rooms = fetch_all("SELECT id, name, capacity FROM rooms")
-    if not rooms:
-        rooms = [
-            {"id": "room_01", "name": "Main Auditorium A", "capacity": 300},
-            {"id": "room_02", "name": "Auditorium B", "capacity": 150}
-        ]
-    slots = ["09:30-11:00", "11:15-12:45", "13:45-15:15", "15:30-17:00"]
-    
-    sessions = [
-        {"id": "sess_01", "title": "Opening Keynote & Welcome", "expected_attendance": 250, "speaker_id": "spk_04", "depends_on": None},
-        {"id": "sess_02", "title": "Generative AI Systems Masterclass", "expected_attendance": 120, "speaker_id": "spk_05", "depends_on": "sess_01"},
-        {"id": "sess_03", "title": "Deep Learning with PyTorch Workshop", "expected_attendance": 50, "speaker_id": "spk_02", "depends_on": "sess_02"},
-        {"id": "sess_04", "title": "Python for Autonomous Agents", "expected_attendance": 80, "speaker_id": "spk_03", "depends_on": "sess_01"}
-    ]
+    result = handle_hero_speaker_cancellation()
+    return JSONResponse(content=result)
 
-    scheduler = EventScheduler(rooms=rooms, slots=slots, sessions=sessions)
-    solve_res = scheduler.solve()
-
-    # Ensure event exists to prevent foreign key failure in outbox
-    ev = fetch_one("SELECT id FROM events LIMIT 1")
-    target_event_id = ev["id"] if ev else "ev_hero_schedule"
-    if not ev:
-        execute_query(
-            "INSERT OR IGNORE INTO events (id, name, brief, event_type) VALUES (?, 'Hero Schedule Event', 'Demo Schedule', 'hackathon')",
-            (target_event_id,)
-        )
-
-    outbox_id = f"notif_change_{uuid.uuid4().hex[:6]}"
-    execute_query("""
-        INSERT INTO outbox (id, event_id, recipient, subject, message, type, status)
-        VALUES (?, ?, 'all_registered_participants@galgotias.edu', 'Schedule Update: Speaker Change for GenAI Masterclass', ?, 'schedule_change', 'held')
-    """, (outbox_id, target_event_id, "Dr. Neha Verma allocated for Generative AI Systems Masterclass in Auditorium B. Schedule re-optimized with zero conflict."))
-
-    return {
-        "status": "re_planned",
-        "action": "SPEAKER_CANCELLATION_HANDLED",
-        "original_speaker": "Dr. Vartika Puri",
-        "substitute_allocated": "Dr. Neha Verma (School of AI)",
-        "match_reason": "Matching research expertise: Generative AI, Machine Learning, available in afternoon slot",
-        "new_schedule": solve_res.get("schedule", []),
-        "staged_outbox_notice": {
-            "id": outbox_id,
-            "status": "held_in_outbox",
-            "message": "Participants staged for notification dispatch upon coordinator sign-off."
-        }
-    }
+@app.get("/api/schedule/export.csv")
+async def export_schedule_csv_endpoint():
+    """Downloads timetable schedule as CSV."""
+    solve_res = solve_timetable()
+    csv_str = export_schedule_csv(solve_res.get("schedule", []))
+    return Response(
+        content=csv_str,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=timetable_export.csv"}
+    )
 
 @app.get("/api/participant/{student_id}/recommendations")
 async def get_student_recommendations(student_id: str):

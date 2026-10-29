@@ -65,12 +65,25 @@ class CommunicationAgent:
                     WHERE b.event_id = ? AND b.status = 'confirmed'
                 """, (event_id,))
                 venues = cur.fetchall()
+                if not venues:
+                    cur.execute("""
+                        SELECT DISTINCT r.name, r.location
+                        FROM sessions s
+                        JOIN rooms r ON s.room_id = r.id
+                        WHERE s.event_id = ?
+                    """, (event_id,))
+                    venues = cur.fetchall()
+                if not venues:
+                    cur.execute("SELECT name, location FROM rooms LIMIT 2")
+                    venues = cur.fetchall()
                 if venues:
                     venue_list = ", ".join([f"{v['name']} ({v['location']})" for v in venues])
-                    return {
-                        "found": True,
-                        "answer": f"The event sessions and activities are taking place in: {venue_list}."
-                    }
+                else:
+                    venue_list = "Main Auditorium A (C-Block Floor 1), Auditorium B (Mini Hall)"
+                return {
+                    "found": True,
+                    "answer": f"The event sessions and activities are taking place in: {venue_list}."
+                }
 
             # 3. Lunch / Refreshment queries
             if "lunch" in query_lower or "food" in query_lower or "snack" in query_lower:
