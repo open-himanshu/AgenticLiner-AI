@@ -148,3 +148,69 @@ async def test_logout():
         res = await client.get("/participant", headers={"Accept": "text/html"})
         assert res.status_code == 302
         assert "/login" in res.headers["location"]
+
+@pytest.mark.anyio
+async def test_signup_page_and_new_user_registration():
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
+        # Check signup page loads
+        res = await client.get("/signup")
+        assert res.status_code == 200
+        assert "Create Campus Account" in res.text
+
+        # Register a new organiser faculty account
+        res = await client.post(
+            "/signup",
+            data={
+                "full_name": "Dr. Rajesh Sharma",
+                "email": "rajesh.sharma@galgotias.edu",
+                "role": "organiser",
+                "department": "School of AI",
+                "password": "FacultyPass@123",
+                "confirm_password": "FacultyPass@123"
+            },
+            headers={"Accept": "text/html"}
+        )
+        assert res.status_code == 302
+        assert res.headers["location"] == "/organiser"
+
+        # Verify new user is authenticated and can access /organiser
+        res = await client.get("/organiser")
+        assert res.status_code == 200
+        assert "Dr. Rajesh Sharma" in res.text
+
+@pytest.mark.anyio
+async def test_signup_validation_errors():
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
+        # Password mismatch error
+        res = await client.post(
+            "/signup",
+            data={
+                "full_name": "Test User",
+                "email": "test.mismatch@galgotias.edu",
+                "role": "participant",
+                "department": "CSE",
+                "password": "PassOne@123",
+                "confirm_password": "PassTwo@123"
+            },
+            headers={"Accept": "text/html"}
+        )
+        assert res.status_code == 200
+        assert "Passwords do not match" in res.text
+
+        # Duplicate email error
+        res = await client.post(
+            "/signup",
+            data={
+                "full_name": "Duplicate Admin",
+                "email": "admin@galgotias.edu",
+                "role": "supervisor",
+                "department": "Dean Office",
+                "password": "AnyPassword@123",
+                "confirm_password": "AnyPassword@123"
+            },
+            headers={"Accept": "text/html"}
+        )
+        assert res.status_code == 200
+        assert "already exists" in res.text

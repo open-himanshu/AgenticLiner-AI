@@ -29,26 +29,39 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
     """Retrieves a user by ID from the users table."""
     return fetch_one("SELECT * FROM users WHERE id = ?", (user_id,))
 
-def create_user(email: str, password: str, role: str, full_name: str, username: Optional[str] = None) -> Dict[str, Any]:
+def create_user(
+    email: str,
+    password: str,
+    role: str,
+    full_name: str,
+    department: str = "School of AI",
+    username: Optional[str] = None
+) -> Dict[str, Any]:
     """Creates a new user record with hashed password."""
     valid_roles = {"supervisor", "organiser", "data_manager", "participant"}
     if role not in valid_roles:
         raise ValueError(f"Invalid role '{role}'. Allowed roles: {valid_roles}")
+
+    # Check if user already exists
+    existing = get_user_by_email(email)
+    if existing:
+        raise ValueError(f"An account with email '{email}' already exists.")
 
     user_id = f"usr_{uuid.uuid4().hex[:10]}"
     u_name = username or email.split("@")[0]
     p_hash = hash_password(password)
 
     execute_query(
-        "INSERT INTO users (id, username, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?, ?)",
-        (user_id, u_name, email.strip().lower(), p_hash, role, full_name)
+        "INSERT INTO users (id, username, email, password_hash, role, full_name, department) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (user_id, u_name, email.strip().lower(), p_hash, role, full_name, department)
     )
     return {
         "id": user_id,
         "username": u_name,
         "email": email.strip().lower(),
         "role": role,
-        "full_name": full_name
+        "full_name": full_name,
+        "department": department
     }
 
 def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
@@ -65,5 +78,6 @@ def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
         "username": user["username"],
         "email": user["email"],
         "role": user["role"],
-        "full_name": user["full_name"]
+        "full_name": user["full_name"],
+        "department": user.get("department") or "School of AI"
     }

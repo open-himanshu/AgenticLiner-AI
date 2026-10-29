@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from typing import Optional
 
-from backend.services.auth_service import authenticate_user
+from backend.services.auth_service import authenticate_user, create_user
 from backend.api.dependencies import get_session_user
 
 router = APIRouter(tags=["Authentication"])
@@ -82,6 +82,93 @@ async def login_submit(
 
     accept = request.headers.get("accept", "")
     if "text/html" in accept:
+        return RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
+
+    return JSONResponse(content={
+        "success": True,
+        "user": user,
+        "redirect_url": target_url
+    })
+
+@router.get("/signup", response_class=HTMLResponse)
+async def signup_page(request: Request):
+    """Renders the signup / registration page with role and department selection."""
+    current_user = get_session_user(request)
+    if current_user:
+        target = ROLE_DASHBOARDS.get(current_user["role"], "/login")
+        return RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="signup.html",
+        context={"error": None, "form_data": {}}
+    )
+
+@router.post("/signup")
+async def signup_submit(
+    request: Request,
+    full_name: str = Form(None),
+    email: str = Form(None),
+    password: str = Form(None),
+    confirm_password: str = Form(None),
+    role: str = Form("participant"),
+    department: str = Form("School of AI")
+):
+    """Processes user registration, role assignment, and logs them in."""
+    if not email or not password:
+        try:
+            body = await request.json()
+            full_name = body.get("full_name")
+            email = body.get("email")
+            password = body.get("password")
+            confirm_password = body.get("confirm_password") or password
+            role = body.get("role", "participant")
+            department = body.get("department", "School of AI")
+        except Exception:
+            pass
+
+    form_data = {
+        "full_name": full_name or "",
+        "email": email or "",
+        "role": role or "participant",
+        "department": department or "School of AI"
+    }
+
+    if not full_name or not email or not password:
+        return templates.TemplateResponse(
+            request=request,
+            name="signup.html",
+            context={"error": "All fields are required.", "form_data": form_data}
+        )
+
+    if password != confirm_password:
+        return templates.TemplateResponse(
+            request=request,
+            name="signup.html",
+            context={"error": "Passwords do not match.", "form_data": form_data}
+        )
+
+    try:
+        user = create_user(
+            email=email.strip(),
+            password=password,
+            role=role,
+            full_name=full_name.strip(),
+            department=department.strip()
+        )
+    except Exception as ex:
+        return templates.TemplateResponse(
+            request=request,
+            name="signup.html",
+            context={"error": str(ex), "form_data": form_data}
+        )
+
+    # Immediately log user in with session cookie
+    request.session["user"] = user
+    target_url = ROLE_DASHBOARDS.get(user["role"], "/")
+
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept or request.headers.get("content-type") == "application/x-www-form-urlencoded":
         return RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
 
     return JSONResponse(content={

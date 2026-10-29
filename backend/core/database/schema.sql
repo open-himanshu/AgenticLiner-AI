@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('supervisor', 'organiser', 'data_manager', 'participant')),
     full_name TEXT NOT NULL,
+    department TEXT DEFAULT 'General',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

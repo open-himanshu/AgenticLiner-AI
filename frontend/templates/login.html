@@ -85,19 +85,58 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mb-3">
                             <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Portal
                         </button>
+
+                        <div class="text-center small mb-3">
+                            <span class="text-muted">Don't have an account?</span>
+                            <a href="/signup" class="fw-bold text-decoration-none ms-1">Sign Up / Create Account</a>
+                        </div>
                     </form>
 
-                    <div class="mt-4 pt-3 border-top text-center text-muted small">
-                        <span>Protected by <b>Kavach Safety & Role-Based Access</b></span>
+                    <!-- Quick Demo Fill Section -->
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="text-muted small fw-semibold mb-2 text-center">Fast Login (Pre-Configured Role Accounts):</div>
+                        <div class="row g-1">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start py-1" onclick="fillCreds('admin@galgotias.edu', 'Admin@123')">
+                                    <span class="badge bg-danger me-1">Admin</span> Supervisor
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start py-1" onclick="fillCreds('organiser@galgotias.edu', 'Organiser@123')">
+                                    <span class="badge bg-primary me-1">Host</span> Organiser
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start py-1" onclick="fillCreds('datamanager@galgotias.edu', 'Data@123')">
+                                    <span class="badge bg-warning text-dark me-1">CSV</span> Data Mgr
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start py-1" onclick="fillCreds('student@galgotias.edu', 'Student@123')">
+                                    <span class="badge bg-info text-dark me-1">User</span> Student
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-2 text-center text-muted" style="font-size: 0.75rem;">
+                        <span>Protected by <b>Kavach Safety & Role-Based Access (RBAC)</b></span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    function fillCreds(email, password) {
+        document.getElementById('email').value = email;
+        document.getElementById('password').value = password;
+    }
+</script>
 
 </body>
 </html>
