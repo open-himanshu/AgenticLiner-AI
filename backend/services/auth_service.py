@@ -93,6 +93,45 @@ def create_user(
         "department": department
     }
 
+def create_user_from_google(
+    email: str,
+    full_name: str,
+    role: str = "participant",
+    department: str = "School of AI"
+) -> Dict[str, Any]:
+    """Creates or updates a user authenticated via Google One-Tap / OAuth."""
+    valid_roles = {"supervisor", "organiser", "data_manager", "participant"}
+    if role not in valid_roles:
+        role = "participant"
+
+    existing = get_user_by_email(email)
+    if existing:
+        return {
+            "id": existing["id"],
+            "username": existing["username"],
+            "email": existing["email"],
+            "role": existing["role"],
+            "full_name": existing["full_name"],
+            "department": existing.get("department") or department
+        }
+
+    user_id = f"usr_{uuid.uuid4().hex[:10]}"
+    u_name = email.split("@")[0]
+    p_hash = hash_password(secrets.token_urlsafe(32))
+
+    execute_query(
+        "INSERT INTO users (id, username, email, password_hash, role, full_name, department, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
+        (user_id, u_name, email.strip().lower(), p_hash, role, full_name, department)
+    )
+    return {
+        "id": user_id,
+        "username": u_name,
+        "email": email.strip().lower(),
+        "role": role,
+        "full_name": full_name,
+        "department": department
+    }
+
 def authenticate_user(email: str, password: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """
     Authenticates user with account lockout defense.

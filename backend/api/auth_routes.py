@@ -1,6 +1,7 @@
 """
 Authentication Routes for AgenticLiner.
-Handles login, signup, email OTP verification, password resets, and role-based redirects.
+Handles login, signup, real email OTP dispatch (Option A), Google One-Tap/OAuth (Option B),
+password resets, and role-based redirects.
 """
 
 from fastapi import APIRouter, Request, Form, HTTPException, status, Depends
@@ -8,17 +9,25 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from typing import Optional
+import os
+import urllib.request
+import json
+import logging
 
 from backend.services.auth_service import (
     authenticate_user,
     create_user,
+    create_user_from_google,
     get_user_by_email,
     create_otp,
     verify_otp,
     reset_user_password,
     validate_strong_password
 )
+from backend.services.email_service import send_email_otp, is_smtp_configured
 from backend.api.dependencies import get_session_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Authentication"])
 
@@ -34,16 +43,23 @@ ROLE_DASHBOARDS = {
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, next: Optional[str] = None):
-    """Renders the unified login page. Redirects if already authenticated."""
+    """Renders the unified login page with Google Sign-In and role-based redirect."""
     current_user = get_session_user(request)
     if current_user:
         target = ROLE_DASHBOARDS.get(current_user["role"], "/login")
         return RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)
 
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"error": None, "next": next or ""}
+        context={
+            "error": None,
+            "next": next or "",
+            "google_client_id": google_client_id,
+            "smtp_configured": is_smtp_configured()
+        }
     )
 
 @router.post("/login")
@@ -61,13 +77,20 @@ async def login_submit(
         except Exception:
             pass
 
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+
     if not email or not password:
         accept = request.headers.get("accept", "")
         if "text/html" in accept or request.headers.get("content-type") == "application/x-www-form-urlencoded":
             return templates.TemplateResponse(
                 request=request,
                 name="login.html",
-                context={"error": "Email and password are required.", "next": ""}
+                context={
+                    "error": "Email and password are required.",
+                    "next": "",
+                    "google_client_id": google_client_id,
+                    "smtp_configured": is_smtp_configured()
+                }
             )
         raise HTTPException(status_code=400, detail="Email and password are required.")
 
@@ -78,7 +101,12 @@ async def login_submit(
             return templates.TemplateResponse(
                 request=request,
                 name="login.html",
-                context={"error": error_msg or "Invalid email or password. Please try again.", "next": ""}
+                context={
+                    "error": error_msg or "Invalid email or password. Please try again.",
+                    "next": "",
+                    "google_client_id": google_client_id,
+                    "smtp_configured": is_smtp_configured()
+                }
             )
         raise HTTPException(status_code=401, detail=error_msg or "Invalid credentials.")
 
@@ -99,16 +127,23 @@ async def login_submit(
 
 @router.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
-    """Renders the signup / registration page with role and department selection."""
+    """Renders the signup / registration page with role, department, and Google Sign-in."""
     current_user = get_session_user(request)
     if current_user:
         target = ROLE_DASHBOARDS.get(current_user["role"], "/login")
         return RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)
 
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+
     return templates.TemplateResponse(
         request=request,
         name="signup.html",
-        context={"error": None, "form_data": {}}
+        context={
+            "error": None,
+            "form_data": {},
+            "google_client_id": google_client_id,
+            "smtp_configured": is_smtp_configured()
+        }
     )
 
 @router.post("/signup")
@@ -123,7 +158,7 @@ async def signup_submit(
 ):
     """
     Validates user registration, verifies strong password,
-    creates OTP for email verification, and forwards to /verify-otp.
+    sends real SMTP email OTP (Option A), and forwards to /verify-otp.
     """
     if not email or not password:
         try:
@@ -137,6 +172,7 @@ async def signup_submit(
         except Exception:
             pass
 
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
     form_data = {
         "full_name": full_name or "",
         "email": email or "",
@@ -148,14 +184,24 @@ async def signup_submit(
         return templates.TemplateResponse(
             request=request,
             name="signup.html",
-            context={"error": "All fields are required.", "form_data": form_data}
+            context={
+                "error": "All fields are required.",
+                "form_data": form_data,
+                "google_client_id": google_client_id,
+                "smtp_configured": is_smtp_configured()
+            }
         )
 
     if password != confirm_password:
         return templates.TemplateResponse(
             request=request,
             name="signup.html",
-            context={"error": "Passwords do not match.", "form_data": form_data}
+            context={
+                "error": "Passwords do not match.",
+                "form_data": form_data,
+                "google_client_id": google_client_id,
+                "smtp_configured": is_smtp_configured()
+            }
         )
 
     # Validate strong password
@@ -164,7 +210,12 @@ async def signup_submit(
         return templates.TemplateResponse(
             request=request,
             name="signup.html",
-            context={"error": pass_err, "form_data": form_data}
+            context={
+                "error": pass_err,
+                "form_data": form_data,
+                "google_client_id": google_client_id,
+                "smtp_configured": is_smtp_configured()
+            }
         )
 
     # Check if user already exists
@@ -173,23 +224,52 @@ async def signup_submit(
         return templates.TemplateResponse(
             request=request,
             name="signup.html",
-            context={"error": f"An account with email '{email}' already exists. Please log in.", "form_data": form_data}
+            context={
+                "error": f"An account with email '{email}' already exists. Please log in.",
+                "form_data": form_data,
+                "google_client_id": google_client_id,
+                "smtp_configured": is_smtp_configured()
+            }
         )
 
     # Store registration info in OTP verification record
+    clean_email = email.strip().lower()
+    clean_name = full_name.strip()
     signup_payload = {
-        "full_name": full_name.strip(),
-        "email": email.strip().lower(),
+        "full_name": clean_name,
+        "email": clean_email,
         "password": password,
         "role": role,
         "department": department.strip()
     }
 
-    otp_code = create_otp(email=email.strip(), purpose="signup", payload=signup_payload)
+    otp_code = create_otp(email=clean_email, purpose="signup", payload=signup_payload)
 
-    # In production/demo, redirect to OTP verification screen with simulated OTP banner
+    # Option A: Attempt real email dispatch via SMTP
+    email_sent = False
+    if is_smtp_configured():
+        email_sent, err_msg = send_email_otp(
+            to_email=clean_email,
+            otp_code=otp_code,
+            purpose="signup",
+            recipient_name=clean_name
+        )
+        if not email_sent:
+            logger.warning(f"Could not send email via SMTP: {err_msg}")
+
+    # Build redirect URL
+    redirect_params = [
+        f"email={clean_email}",
+        "purpose=signup",
+        f"email_sent={1 if email_sent else 0}",
+        f"smtp_configured={1 if is_smtp_configured() else 0}"
+    ]
+    # Only append demo_code if email was not sent (for testing fallback)
+    if not email_sent:
+        redirect_params.append(f"demo_code={otp_code}")
+
     return RedirectResponse(
-        url=f"/verify-otp?email={email.strip().lower()}&purpose=signup&demo_code={otp_code}",
+        url=f"/verify-otp?{'&'.join(redirect_params)}",
         status_code=status.HTTP_302_FOUND
     )
 
@@ -198,9 +278,11 @@ async def verify_otp_page(
     request: Request,
     email: str,
     purpose: str = "signup",
-    demo_code: Optional[str] = None
+    demo_code: Optional[str] = None,
+    email_sent: Optional[str] = None,
+    smtp_configured: Optional[str] = None
 ):
-    """Renders OTP verification page with 6-digit input and demo OTP notification."""
+    """Renders OTP verification page with real inbox notification or demo code fallback."""
     return templates.TemplateResponse(
         request=request,
         name="verify_otp.html",
@@ -208,6 +290,8 @@ async def verify_otp_page(
             "email": email,
             "purpose": purpose,
             "demo_code": demo_code,
+            "email_sent": email_sent == "1",
+            "smtp_configured": smtp_configured == "1" or is_smtp_configured(),
             "error": None
         }
     )
@@ -230,12 +314,13 @@ async def verify_otp_submit(
                 "email": email,
                 "purpose": purpose,
                 "demo_code": None,
+                "email_sent": False,
+                "smtp_configured": is_smtp_configured(),
                 "error": err_msg or "Invalid verification code."
             }
         )
 
     if purpose == "signup":
-        # Create user account in database
         try:
             user = create_user(
                 email=payload["email"],
@@ -244,7 +329,6 @@ async def verify_otp_submit(
                 full_name=payload["full_name"],
                 department=payload.get("department", "School of AI")
             )
-            # Log in the user
             request.session["user"] = user
             target_url = ROLE_DASHBOARDS.get(user["role"], "/")
             return RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
@@ -252,11 +336,17 @@ async def verify_otp_submit(
             return templates.TemplateResponse(
                 request=request,
                 name="verify_otp.html",
-                context={"email": email, "purpose": purpose, "demo_code": None, "error": str(e)}
+                context={
+                    "email": email,
+                    "purpose": purpose,
+                    "demo_code": None,
+                    "email_sent": False,
+                    "smtp_configured": is_smtp_configured(),
+                    "error": str(e)
+                }
             )
 
     elif purpose == "password_reset":
-        # Authorize password reset by creating temporary session reset flag
         request.session["reset_verified_email"] = email.strip().lower()
         return RedirectResponse(url=f"/reset-password?email={email.strip().lower()}", status_code=status.HTTP_302_FOUND)
 
@@ -268,21 +358,107 @@ async def resend_otp(
     email: str = Form(...),
     purpose: str = Form("signup")
 ):
-    """Regenerates a new 6-digit OTP code."""
-    # Retrieve existing payload if available
+    """Regenerates a new 6-digit OTP code and dispatches via email if configured."""
     from backend.core.database.connection import fetch_one
+    clean_email = email.strip().lower()
     existing = fetch_one(
         "SELECT payload_json FROM otp_verifications WHERE email = ? AND purpose = ?",
-        (email.strip().lower(), purpose)
+        (clean_email, purpose)
     )
-    import json
     payload = json.loads(existing["payload_json"]) if existing and existing["payload_json"] else {}
     
-    new_code = create_otp(email=email.strip(), purpose=purpose, payload=payload)
+    new_code = create_otp(email=clean_email, purpose=purpose, payload=payload)
+
+    email_sent = False
+    if is_smtp_configured():
+        recipient_name = payload.get("full_name", "")
+        email_sent, _ = send_email_otp(
+            to_email=clean_email,
+            otp_code=new_code,
+            purpose=purpose,
+            recipient_name=recipient_name
+        )
+
+    redirect_params = [
+        f"email={clean_email}",
+        f"purpose={purpose}",
+        f"email_sent={1 if email_sent else 0}",
+        f"smtp_configured={1 if is_smtp_configured() else 0}",
+        "resent=1"
+    ]
+    if not email_sent:
+        redirect_params.append(f"demo_code={new_code}")
+
     return RedirectResponse(
-        url=f"/verify-otp?email={email.strip().lower()}&purpose={purpose}&demo_code={new_code}&resent=1",
+        url=f"/verify-otp?{'&'.join(redirect_params)}",
         status_code=status.HTTP_302_FOUND
     )
+
+# --- Option B: Google One-Tap & OAuth Authentication ---
+
+@router.post("/auth/google")
+async def google_auth_callback(request: Request):
+    """
+    Handles Google Sign-In (Option B).
+    Supports:
+    1. Real Google Identity Services (GIS) ID Token verification.
+    2. One-click Fast Demo Google Sign-In for evaluators / local testing.
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request payload.")
+
+    credential = data.get("credential")
+    role = data.get("role", "participant")
+    department = data.get("department", "School of AI")
+    is_demo = data.get("demo_google", False)
+
+    google_email = None
+    google_name = None
+
+    if is_demo:
+        # One-click fast Google login for testing without requiring GCP client ID
+        google_email = data.get("email") or "google.user@galgotias.edu"
+        google_name = data.get("name") or "Campus Google User"
+        role = data.get("role") or "organiser"
+    elif credential:
+        # Real Google Token Verification via Google's tokeninfo API
+        try:
+            tokeninfo_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={credential}"
+            req = urllib.request.Request(tokeninfo_url, headers={"User-Agent": "AgenticLiner-Auth"})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                if response.status == 200:
+                    token_data = json.loads(response.read().decode("utf-8"))
+                    google_email = token_data.get("email")
+                    google_name = token_data.get("name")
+                    if not google_email:
+                        raise HTTPException(status_code=400, detail="Google token does not contain a verified email.")
+                else:
+                    raise HTTPException(status_code=400, detail="Failed to verify Google token.")
+        except Exception as ex:
+            logger.error(f"Google Token Verification Error: {ex}")
+            raise HTTPException(status_code=400, detail=f"Google authentication failed: {str(ex)}")
+    else:
+        raise HTTPException(status_code=400, detail="Missing Google credential.")
+
+    # Create or retrieve user from database
+    user = create_user_from_google(
+        email=google_email,
+        full_name=google_name,
+        role=role,
+        department=department
+    )
+
+    # Establish session cookie
+    request.session["user"] = user
+    target_url = ROLE_DASHBOARDS.get(user["role"], "/")
+
+    return JSONResponse(content={
+        "success": True,
+        "user": user,
+        "redirect_url": target_url
+    })
 
 @router.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
@@ -298,8 +474,9 @@ async def forgot_password_submit(
     request: Request,
     email: str = Form(...)
 ):
-    """Validates email and sends 6-digit OTP for password reset."""
-    user = get_user_by_email(email.strip())
+    """Validates email and sends 6-digit OTP for password reset via real email or fallback."""
+    clean_email = email.strip().lower()
+    user = get_user_by_email(clean_email)
     if not user:
         return templates.TemplateResponse(
             request=request,
@@ -307,9 +484,28 @@ async def forgot_password_submit(
             context={"error": "No account registered with this email address.", "success": None}
         )
 
-    otp_code = create_otp(email=email.strip(), purpose="password_reset", payload={"user_id": user["id"]})
+    otp_code = create_otp(email=clean_email, purpose="password_reset", payload={"user_id": user["id"]})
+
+    email_sent = False
+    if is_smtp_configured():
+        email_sent, _ = send_email_otp(
+            to_email=clean_email,
+            otp_code=otp_code,
+            purpose="password_reset",
+            recipient_name=user.get("full_name", "")
+        )
+
+    redirect_params = [
+        f"email={clean_email}",
+        "purpose=password_reset",
+        f"email_sent={1 if email_sent else 0}",
+        f"smtp_configured={1 if is_smtp_configured() else 0}"
+    ]
+    if not email_sent:
+        redirect_params.append(f"demo_code={otp_code}")
+
     return RedirectResponse(
-        url=f"/verify-otp?email={email.strip().lower()}&purpose=password_reset&demo_code={otp_code}",
+        url=f"/verify-otp?{'&'.join(redirect_params)}",
         status_code=status.HTTP_302_FOUND
     )
 
@@ -353,7 +549,6 @@ async def reset_password_submit(
             context={"email": email, "error": err_msg or "Failed to reset password."}
         )
 
-    # Clear reset flag from session
     request.session.pop("reset_verified_email", None)
     return RedirectResponse(url="/login?reset_success=1", status_code=status.HTTP_302_FOUND)
 

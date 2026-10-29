@@ -25,7 +25,7 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
             background: #ffffff;
             width: 100%;
-            max-width: 460px;
+            max-width: 480px;
             overflow: hidden;
         }
         .otp-header {
@@ -53,20 +53,35 @@
                         <span class="fs-2">🔐</span>
                         <h3 class="fw-bold mb-0">Two-Factor OTP Verification</h3>
                     </div>
-                    <p class="small text-white-50 mb-0">Campus Identity Verification</p>
+                    <p class="small text-white-50 mb-0">Galgotias Campus Identity Security</p>
                 </div>
 
                 <div class="p-4 p-sm-5">
-                    <!-- Campus Email Notification Simulator Alert -->
-                    {% if demo_code %}
+                    {% if email_sent %}
+                    <!-- Real Email Dispatched Success Banner -->
+                    <div class="alert alert-success border border-success-subtle shadow-sm py-3 px-3 mb-4 rounded-3">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-envelope-check-fill text-success fs-4 mt-1"></i>
+                            <div>
+                                <strong class="text-success">Verification Code Dispatched!</strong>
+                                <p class="small text-muted mb-0 mt-1">
+                                    We sent a 6-digit passcode to <strong>{{ email }}</strong>. Please check your inbox (and Spam/Junk folder if not received in 30 seconds).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% elif demo_code %}
+                    <!-- Local Offline / Testing Banner -->
                     <div class="alert alert-info border border-info-subtle shadow-sm py-2 px-3 mb-4 rounded-3">
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <i class="bi bi-envelope-check-fill text-primary fs-5"></i>
-                            <strong class="text-primary small">Galgotias Campus Mail Simulator</strong>
+                            <i class="bi bi-info-circle-fill text-primary"></i>
+                            <strong class="text-primary small">Offline / Demo Mode</strong>
                         </div>
-                        <p class="small text-muted mb-1">A 6-digit one-time passcode was dispatched to <strong>{{ email }}</strong>:</p>
+                        <p class="small text-muted mb-2">
+                            (To send real emails to your Gmail inbox, configure <code>SMTP_USER</code> and <code>SMTP_PASSWORD</code> in <code>.env</code>).
+                        </p>
                         <div class="d-flex align-items-center justify-content-between bg-white rounded p-2 border">
-                            <span class="fs-5 fw-bold text-dark font-monospace tracking-wide">{{ demo_code }}</span>
+                            <span class="fs-5 fw-bold text-dark font-monospace">{{ demo_code }}</span>
                             <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="document.getElementById('otp_code').value='{{ demo_code }}'">
                                 <i class="bi bi-box-arrow-in-down me-1"></i> Auto-Fill
                             </button>
@@ -118,7 +133,7 @@
                         <input type="hidden" name="email" value="{{ email }}">
                         <input type="hidden" name="purpose" value="{{ purpose }}">
                         <button type="submit" class="btn btn-link text-decoration-none small text-muted p-0">
-                            Didn't receive the code? <span class="text-primary fw-semibold">Resend OTP</span>
+                            Didn't receive the email? <span class="text-primary fw-semibold">Resend OTP</span>
                         </button>
                     </form>
 

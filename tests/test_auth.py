@@ -4,6 +4,7 @@ Automated Pytest Suite for Authentication, Strong Password Policy, OTP Verificat
 
 import pytest
 import httpx
+import uuid
 from backend.api.main import app
 from backend.services.auth_service import (
     hash_password,
@@ -16,9 +17,9 @@ from backend.services.auth_service import (
 )
 from backend.services.seed_users import seed_users
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(autouse=True)
 def setup_users():
-    seed_users(force=False)
+    seed_users(force=True)
 
 def test_password_hashing():
     raw_pass = "SecurePass@2026"
@@ -296,3 +297,41 @@ async def test_forgot_and_reset_password_flow():
         )
         assert res_login.status_code == 302
         assert res_login.headers["location"] == "/participant"
+
+@pytest.mark.anyio
+async def test_google_auth_fast_login_and_role_access():
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
+        # Sign in with Google as an Organiser
+        res = await client.post(
+            "/auth/google",
+            json={
+                "demo_google": True,
+                "email": "prof.sharma.google@galgotias.edu",
+                "name": "Prof. Sharma",
+                "role": "organiser",
+                "department": "Computer Science (CSE)"
+            }
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["success"] is True
+        assert data["redirect_url"] == "/organiser"
+        assert data["user"]["email"] == "prof.sharma.google@galgotias.edu"
+        assert data["user"]["role"] == "organiser"
+
+        # Verify session cookie was issued and can access /organiser
+        res_dash = await client.get("/organiser")
+        assert res_dash.status_code == 200
+        assert "Prof. Sharma" in res_dash.text
+
+@pytest.mark.anyio
+async def test_email_service_safety():
+    from backend.services.email_service import is_smtp_configured, send_email_otp
+    # In test environment without SMTP credentials, is_smtp_configured returns False
+    # and send_email_otp safely returns False without raising unhandled exceptions
+    ok, err = send_email_otp("test@galgotias.edu", "123456", "signup")
+    if not is_smtp_configured():
+        assert ok is False
+        assert "SMTP is not configured" in err
+

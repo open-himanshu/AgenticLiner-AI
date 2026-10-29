@@ -48,27 +48,30 @@ SEEDED_ACCOUNTS = [
     }
 ]
 
+_CACHED_HASHES = {}
+
+def get_cached_hash(password: str) -> str:
+    if password not in _CACHED_HASHES:
+        _CACHED_HASHES[password] = hash_password(password)
+    return _CACHED_HASHES[password]
+
 def seed_users(force: bool = False):
     with get_connection() as conn:
         cur = conn.cursor()
         if force:
             cur.execute("DELETE FROM users")
-            print("Cleared existing users.")
 
         inserted = 0
         for acc in SEEDED_ACCOUNTS:
             cur.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(?)", (acc["email"],))
             existing = cur.fetchone()
             if not existing:
-                p_hash = hash_password(acc["password"])
+                p_hash = get_cached_hash(acc["password"])
                 cur.execute(
                     "INSERT INTO users (id, username, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?, ?)",
                     (acc["id"], acc["username"], acc["email"], p_hash, acc["role"], acc["full_name"])
                 )
                 inserted += 1
-                print(f"Created {acc['role']} account: {acc['email']}")
-            else:
-                print(f"Account for {acc['email']} already exists. Skipping.")
 
         conn.commit()
         print(f"Seed complete. {inserted} user accounts created.")
