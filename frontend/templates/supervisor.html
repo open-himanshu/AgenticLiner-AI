@@ -45,6 +45,32 @@
     </div>
     {% endif %}
 
+    {% if request.query_params.get('approved') %}
+    <div class="alert alert-success border border-success-subtle shadow-sm alert-dismissible fade show p-3 mb-4 rounded-3" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+            <div>
+                <strong class="text-dark">Dean Approval Granted:</strong>
+                <span class="text-muted small">Event approved, bookings locked, and held outbox notices have been released.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if request.query_params.get('rejected') %}
+    <div class="alert alert-danger border border-danger-subtle shadow-sm alert-dismissible fade show p-3 mb-4 rounded-3" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-x-circle-fill text-danger fs-4"></i>
+            <div>
+                <strong class="text-dark">Event Request Rejected:</strong>
+                <span class="text-muted small">Staged bookings have been cancelled and notification delivered to the club organiser.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
     <!-- Metrics Cards (Real DB Counts) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
@@ -170,13 +196,47 @@
                         <tbody>
                             {% for ev in pending_events %}
                             <tr>
-                                <td class="fw-bold">{{ ev.name }}</td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ ev.name }}</div>
+                                    <div class="small text-muted">{{ ev.brief | truncate(50) }}</div>
+                                </td>
                                 <td>{{ ev.organizer_department }}</td>
-                                <td>{{ ev.expected_participants }}</td>
+                                <td><span class="badge bg-primary-subtle text-primary">{{ ev.expected_participants }} students</span></td>
                                 <td><span class="badge bg-light text-dark border">{{ ev.venue_name or 'TBD' }}</span></td>
                                 <td>
-                                    <button class="btn btn-sm btn-success me-1">Approve</button>
-                                    <button class="btn btn-sm btn-outline-danger">Reject</button>
+                                    <form method="POST" action="/api/events/{{ ev.id }}/approve" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success me-1 fw-semibold" title="Approve event and confirm bookings">
+                                            <i class="bi bi-check-lg me-1"></i>Approve
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-danger fw-semibold" data-bs-toggle="modal" data-bs-target="#rejectModal{{ loop.index }}">
+                                        <i class="bi bi-x-lg me-1"></i>Reject
+                                    </button>
+
+                                    <!-- Modal for Rejection Reason -->
+                                    <div class="modal fade" id="rejectModal{{ loop.index }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <form method="POST" action="/api/events/{{ ev.id }}/reject">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-octagon me-2"></i>Reject Event Request</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p class="small text-muted">Please provide a reason for rejecting <b>{{ ev.name }}</b>. The organiser will receive this explanation.</p>
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-semibold">Reason for Rejection</label>
+                                                            <textarea class="form-control" name="reason" rows="3" required placeholder="e.g. Schedule clash with University Convocation, or venue unavailable."></textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                        <button type="submit" class="btn btn-danger btn-sm fw-bold">Confirm Rejection</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -188,6 +248,44 @@
                     <i class="bi bi-inbox fs-1 text-secondary d-block mb-2"></i>
                     <p class="mb-1 fw-semibold">No pending approval requests.</p>
                     <p class="small text-muted mb-0">When student clubs submit event plans, Dean approval requisitions will appear here.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Active Approved Events Table -->
+            <div class="card card-custom p-4 bg-white mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-check2-all text-success me-2"></i>Approved Campus Events</h5>
+                    <span class="badge bg-success-subtle text-success">{{ approved_events|length }} Approved</span>
+                </div>
+                {% if approved_events %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Event Title</th>
+                                <th>Host Department</th>
+                                <th>Allocated Venue</th>
+                                <th>Expected Students</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for aev in approved_events %}
+                            <tr>
+                                <td class="fw-bold">{{ aev.name }}</td>
+                                <td>{{ aev.organizer_department }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ aev.venue_name or 'Campus Ground' }}</span></td>
+                                <td>{{ aev.expected_participants }} students</td>
+                                <td><span class="badge bg-success">Confirmed</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <p class="small text-muted mb-0">No approved events yet. Pending requests will move here once approved.</p>
                 </div>
                 {% endif %}
             </div>

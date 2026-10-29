@@ -29,6 +29,7 @@ from backend.modules.module7_analytics.generator import EventAnalyticsEngine
 from backend.services.admin_service import reset_all_operational_data
 from backend.api.auth_routes import router as auth_router, ROLE_DASHBOARDS
 from backend.api.inventory_routes import router as inventory_router
+from backend.api.event_routes import router as event_router
 from backend.api.dependencies import require_auth, require_role, get_session_user
 
 app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
@@ -57,6 +58,9 @@ app.include_router(auth_router)
 
 # Include Inventory & Catalog Router (Seller-style Add/Export)
 app.include_router(inventory_router)
+
+# Include Event Workflow & Approvals Router (Phase 5)
+app.include_router(event_router)
 
 # Custom Exception Handlers for Strict RBAC & Unauthenticated Redirects
 @app.exception_handler(HTTPException)
@@ -146,10 +150,25 @@ async def supervisor_dashboard(
 ):
     """Supervisor Dashboard: University Admin & Dean Authority"""
     pending_count = fetch_one("SELECT count(*) as count FROM events WHERE approval_status = 'pending_dean_approval'")["count"]
-    active_count = fetch_one("SELECT count(*) as count FROM events WHERE status IN ('allocated', 'approved', 'booked')")["count"]
+    active_count = fetch_one("SELECT count(*) as count FROM events WHERE approval_status = 'approved'")["count"]
     rooms_count = fetch_one("SELECT count(*) as count FROM rooms")["count"]
     resources_count = fetch_one("SELECT count(*) as count FROM resources")["count"]
-    pending_events = fetch_all("SELECT * FROM events WHERE approval_status = 'pending_dean_approval' ORDER BY created_at DESC LIMIT 10")
+    
+    pending_events = fetch_all("""
+        SELECT e.*, 
+               (SELECT r.name FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.event_id = e.id LIMIT 1) as venue_name,
+               (SELECT count(*) FROM bookings b WHERE b.event_id = e.id AND b.resource_id IS NOT NULL) as req_count
+        FROM events e 
+        WHERE e.approval_status = 'pending_dean_approval' 
+        ORDER BY e.created_at DESC LIMIT 10
+    """)
+    approved_events = fetch_all("""
+        SELECT e.*, 
+               (SELECT r.name FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.event_id = e.id LIMIT 1) as venue_name
+        FROM events e 
+        WHERE e.approval_status = 'approved' 
+        ORDER BY e.created_at DESC LIMIT 10
+    """)
 
     return templates.TemplateResponse(
         request=request,
@@ -160,7 +179,8 @@ async def supervisor_dashboard(
             "active_count": active_count,
             "rooms_count": rooms_count,
             "resources_count": resources_count,
-            "pending_events": pending_events
+            "pending_events": pending_events,
+            "approved_events": approved_events
         }
     )
 
@@ -209,6 +229,13 @@ async def organiser_dashboard(
     total_reg = fetch_one("SELECT count(*) as count FROM registrations WHERE status = 'confirmed'")["count"]
     waitlisted = fetch_one("SELECT count(*) as count FROM registrations WHERE status = 'waitlisted'")["count"]
     outbox_count = fetch_one("SELECT count(*) as count FROM outbox WHERE status = 'held'")["count"]
+    my_events = fetch_all("""
+        SELECT e.*, 
+               (SELECT r.name FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.event_id = e.id LIMIT 1) as venue_name,
+               (SELECT count(*) FROM registrations reg WHERE reg.event_id = e.id AND reg.status = 'confirmed') as confirmed_count
+        FROM events e 
+        ORDER BY e.created_at DESC LIMIT 10
+    """)
 
     return templates.TemplateResponse(
         request=request,
@@ -218,7 +245,8 @@ async def organiser_dashboard(
             "my_events_count": my_events_count,
             "total_registered": total_reg,
             "waitlisted_count": waitlisted,
-            "outbox_count": outbox_count
+            "outbox_count": outbox_count,
+            "my_events": my_events
         }
     )
 

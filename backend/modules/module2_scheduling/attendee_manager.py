@@ -194,7 +194,14 @@ class AttendeeManager:
             # Find primary keynote session to record attendance timestamp
             cur.execute("SELECT id FROM sessions WHERE event_id = ? LIMIT 1", (event_id,))
             sess = cur.fetchone()
-            sess_id = sess["id"] if sess else "sess_default"
+            if not sess:
+                sess_id = f"sess_{uuid.uuid4().hex[:6]}"
+                cur.execute(
+                    "INSERT INTO sessions (id, event_id, title, duration_minutes) VALUES (?, ?, 'Main Keynote Session', 60)",
+                    (sess_id, event_id)
+                )
+            else:
+                sess_id = sess["id"]
 
             att_id = f"att_{uuid.uuid4().hex[:8]}"
             cur.execute("""

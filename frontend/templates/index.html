@@ -34,6 +34,10 @@
                 <h5 class="fw-bold mb-3"><i class="bi bi-pencil-square text-primary me-2"></i>Event Brief Input</h5>
                 <form id="briefForm">
                     <div class="mb-3">
+                        <label class="form-label small fw-semibold">Event Title / Name</label>
+                        <input type="text" class="form-control" id="eventNameInput" placeholder="e.g. SparkX Annual AI Hackathon 2026">
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small fw-semibold">Event Description / Natural Language Brief</label>
                         <textarea class="form-control" id="briefText" rows="3" placeholder="e.g. 2-day Campus AI Hackathon for 180 students with coding workshops, lunch packs, extension spike boards and stage mics..."></textarea>
                     </div>
@@ -56,6 +60,15 @@
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Host Department</label>
                         <input type="text" class="form-control" id="organizerDept" placeholder="e.g. School of AI / CSE Club">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Target Campus Venue</label>
+                        <select class="form-select" id="venueSelect">
+                            <option value="">Select campus venue (optional)...</option>
+                            {% for r in rooms %}
+                            <option value="{{ r.id }}">{{ r.name }} (Capacity: {{ r.capacity }} seats{% if r.requires_special_approval %}, Dean Approval Req.{% endif %})</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="d-grid gap-2 mb-2">
                         <button type="button" class="btn btn-outline-primary fw-semibold" id="btnParseBrief">
@@ -384,8 +397,59 @@
         }
     });
 
-    document.getElementById('btnDispatchRequisition').addEventListener('click', () => {
-        window.location.href = '/autopilot';
+    document.getElementById('btnDispatchRequisition').addEventListener('click', async () => {
+        const brief = document.getElementById('briefText').value.trim();
+        const headcount = parseInt(document.getElementById('headcount').value) || 100;
+        const eventType = document.getElementById('eventType').value || 'workshop';
+        const organizerDept = document.getElementById('organizerDept').value.trim() || 'Student Technical Club';
+        const roomId = document.getElementById('venueSelect')?.value || '';
+        
+        let eventName = document.getElementById('eventNameInput')?.value?.trim();
+        if (!eventName) {
+            eventName = brief.length > 0 ? brief.split('.')[0].slice(0, 40) : (eventType.toUpperCase() + ' 2026');
+        }
+
+        const btn = document.getElementById('btnDispatchRequisition');
+        const origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting Plan & Requisitions...';
+
+        try {
+            const resp = await fetch('/api/events/plan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: eventName,
+                    brief: brief || 'Campus organized event',
+                    event_type: eventType,
+                    expected_participants: headcount,
+                    organizer_department: organizerDept,
+                    room_id: roomId || null,
+                    requisitions: requisitions
+                })
+            });
+
+            const result = await resp.json();
+            if (resp.ok && result.success) {
+                alert(`✅ Event Plan '${result.name}' successfully submitted!\nApproval Status: ${result.approval_status.toUpperCase()}`);
+                window.location.href = '/organiser?created=1';
+            } else if (result.error === 'INVARIANT_VIOLATION') {
+                alert(`⚠️ Kavach Safety Invariant Violation:\n[${result.rule}] ${result.item}\n${result.detail}\n\nSuggestion: ${result.suggestion || 'Please adjust capacity or choose an alternative venue.'}`);
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            } else {
+                alert('Error submitting plan: ' + (result.detail || result.error || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        } catch (err) {
+            alert('Failed to submit event plan: ' + err);
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     });
 </script>
 {% endblock %}
