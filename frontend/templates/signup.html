@@ -25,7 +25,7 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
             background: #ffffff;
             width: 100%;
-            max-width: 520px;
+            max-width: 550px;
             overflow: hidden;
         }
         .signup-header {
@@ -47,7 +47,7 @@
                         <span class="fs-2">🚀</span>
                         <h3 class="fw-bold mb-0">Create Campus Account</h3>
                     </div>
-                    <p class="small text-white-50 mb-0">Select your role and department to get personalized access</p>
+                    <p class="small text-white-50 mb-0">University Event Planning & Role-Based Access</p>
                     <span class="badge bg-light text-dark mt-2" style="font-size: 0.7rem;">Galgotias University SparkX 3.0</span>
                 </div>
 
@@ -59,7 +59,7 @@
                     </div>
                     {% endif %}
 
-                    <form action="/signup" method="POST">
+                    <form action="/signup" method="POST" id="signupForm">
                         <div class="mb-3">
                             <label for="full_name" class="form-label small fw-semibold text-secondary">Full Name</label>
                             <div class="input-group">
@@ -74,20 +74,21 @@
                                 <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
                                 <input type="email" class="form-control" id="email" name="email" value="{{ form_data.get('email', '') }}" placeholder="yourname@galgotias.edu" required>
                             </div>
+                            <div class="form-text small" style="font-size: 0.75rem;">A 6-digit verification code will be sent to confirm your email.</div>
                         </div>
 
                         <div class="row g-2 mb-3">
                             <div class="col-sm-6">
-                                <label for="role" class="form-label small fw-semibold text-secondary">Role / Account Type</label>
+                                <label for="role" class="form-label small fw-semibold text-secondary">Account Role</label>
                                 <select class="form-select" id="role" name="role" required>
                                     <option value="organiser" {% if form_data.get('role') == 'organiser' or not form_data.get('role') %}selected{% endif %}>Organiser (Faculty/Club)</option>
-                                    <option value="supervisor" {% if form_data.get('role') == 'supervisor' %}selected{% endif %}>Supervisor (Dean / Admin)</option>
+                                    <option value="supervisor" {% if form_data.get('role') == 'supervisor' %}selected{% endif %}>Supervisor (Dean/Admin)</option>
                                     <option value="participant" {% if form_data.get('role') == 'participant' %}selected{% endif %}>Participant (Student)</option>
                                     <option value="data_manager" {% if form_data.get('role') == 'data_manager' %}selected{% endif %}>Data Manager (CSV Ops)</option>
                                 </select>
                             </div>
                             <div class="col-sm-6">
-                                <label for="department" class="form-label small fw-semibold text-secondary">Department</label>
+                                <label for="department" class="form-label small fw-semibold text-secondary">Department / School</label>
                                 <select class="form-select" id="department" name="department" required>
                                     <option value="School of AI" selected>School of AI</option>
                                     <option value="Computer Science (CSE)">Computer Science (CSE)</option>
@@ -99,19 +100,49 @@
                             </div>
                         </div>
 
-                        <div class="row g-2 mb-4">
-                            <div class="col-sm-6">
-                                <label for="password" class="form-label small fw-semibold text-secondary">Password</label>
-                                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                        <div class="mb-2">
+                            <label for="password" class="form-label small fw-semibold text-secondary">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="bi bi-key"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required oninput="checkStrength(this.value)">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password', this)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
                             </div>
-                            <div class="col-sm-6">
-                                <label for="confirm_password" class="form-label small fw-semibold text-secondary">Confirm Password</label>
+                            <!-- Strength meter -->
+                            <div class="progress mt-2" style="height: 6px;">
+                                <div id="strengthBar" class="progress-bar bg-danger" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <span id="strengthText" class="small text-muted" style="font-size: 0.75rem;">Password Strength: None</span>
+                            </div>
+                        </div>
+
+                        <!-- Password Policy Checklist -->
+                        <div class="bg-light p-2 px-3 rounded mb-3 border small">
+                            <div class="fw-semibold text-secondary mb-1" style="font-size: 0.75rem;">Password Policy (Compulsory):</div>
+                            <div class="row g-1" style="font-size: 0.73rem;">
+                                <div class="col-6" id="req-len" class="text-danger"><i class="bi bi-x-circle me-1"></i> 8+ Characters</div>
+                                <div class="col-6" id="req-up" class="text-danger"><i class="bi bi-x-circle me-1"></i> Uppercase (A-Z)</div>
+                                <div class="col-6" id="req-low" class="text-danger"><i class="bi bi-x-circle me-1"></i> Lowercase (a-z)</div>
+                                <div class="col-6" id="req-num" class="text-danger"><i class="bi bi-x-circle me-1"></i> Number (0-9)</div>
+                                <div class="col-12" id="req-spec" class="text-danger"><i class="bi bi-x-circle me-1"></i> Special Symbol (!@#$%^&*)</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="confirm_password" class="form-label small fw-semibold text-secondary">Confirm Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="bi bi-check2-circle"></i></span>
                                 <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="••••••••" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('confirm_password', this)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
                             </div>
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mb-3">
-                            <i class="bi bi-person-check-fill me-1"></i> Register & Enter Dashboard
+                            <i class="bi bi-shield-check me-1"></i> Continue to Verification (OTP)
                         </button>
 
                         <div class="text-center small">
@@ -124,6 +155,73 @@
         </div>
     </div>
 </div>
+
+<script>
+function togglePassword(inputId, btn) {
+    const field = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        field.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+function checkStrength(pwd) {
+    const len = pwd.length >= 8;
+    const up = /[A-Z]/.test(pwd);
+    const low = /[a-z]/.test(pwd);
+    const num = /[0-9]/.test(pwd);
+    const spec = /[!@#$%^&*()_+=\-\[\]{}|;:,.<>?/]/.test(pwd);
+
+    updateReq('req-len', len, '8+ Characters');
+    updateReq('req-up', up, 'Uppercase (A-Z)');
+    updateReq('req-low', low, 'Lowercase (a-z)');
+    updateReq('req-num', num, 'Number (0-9)');
+    updateReq('req-spec', spec, 'Special Symbol (!@#$%^&*)');
+
+    const score = [len, up, low, num, spec].filter(Boolean).length;
+    const bar = document.getElementById('strengthBar');
+    const text = document.getElementById('strengthText');
+
+    if (score === 0) {
+        bar.style.width = '0%';
+        bar.className = 'progress-bar bg-danger';
+        text.innerText = 'Password Strength: None';
+        text.className = 'small text-muted';
+    } else if (score < 3) {
+        bar.style.width = '35%';
+        bar.className = 'progress-bar bg-danger';
+        text.innerText = 'Password Strength: Weak';
+        text.className = 'small text-danger';
+    } else if (score < 5) {
+        bar.style.width = '70%';
+        bar.className = 'progress-bar bg-warning';
+        text.innerText = 'Password Strength: Moderate';
+        text.className = 'small text-warning';
+    } else {
+        bar.style.width = '100%';
+        bar.className = 'progress-bar bg-success';
+        text.innerText = 'Password Strength: Strong & Secure!';
+        text.className = 'small text-success fw-bold';
+    }
+}
+
+function updateReq(elemId, isValid, label) {
+    const el = document.getElementById(elemId);
+    if (isValid) {
+        el.className = 'col-6 text-success';
+        if (elemId === 'req-spec') el.className = 'col-12 text-success';
+        el.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> ${label}`;
+    } else {
+        el.className = 'col-6 text-danger';
+        if (elemId === 'req-spec') el.className = 'col-12 text-danger';
+        el.innerHTML = `<i class="bi bi-x-circle me-1"></i> ${label}`;
+    }
+}
+</script>
 
 </body>
 </html>

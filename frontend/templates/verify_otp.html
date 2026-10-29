@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email OTP - AgenticLiner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --brand-primary: #1E3A8A;
+            --brand-accent: #3b82f6;
+        }
+        body {
+            background-color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .otp-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            background: #ffffff;
+            width: 100%;
+            max-width: 460px;
+            overflow: hidden;
+        }
+        .otp-header {
+            background: linear-gradient(135deg, #1E3A8A 0%, #1e40af 100%);
+            color: #ffffff;
+            padding: 28px 24px;
+            text-align: center;
+        }
+        .otp-input-field {
+            letter-spacing: 0.6rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 d-flex justify-content-center">
+            <div class="otp-card">
+                <div class="otp-header">
+                    <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                        <span class="fs-2">🔐</span>
+                        <h3 class="fw-bold mb-0">Two-Factor OTP Verification</h3>
+                    </div>
+                    <p class="small text-white-50 mb-0">Campus Identity Verification</p>
+                </div>
+
+                <div class="p-4 p-sm-5">
+                    <!-- Campus Email Notification Simulator Alert -->
+                    {% if demo_code %}
+                    <div class="alert alert-info border border-info-subtle shadow-sm py-2 px-3 mb-4 rounded-3">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="bi bi-envelope-check-fill text-primary fs-5"></i>
+                            <strong class="text-primary small">Galgotias Campus Mail Simulator</strong>
+                        </div>
+                        <p class="small text-muted mb-1">A 6-digit one-time passcode was dispatched to <strong>{{ email }}</strong>:</p>
+                        <div class="d-flex align-items-center justify-content-between bg-white rounded p-2 border">
+                            <span class="fs-5 fw-bold text-dark font-monospace tracking-wide">{{ demo_code }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="document.getElementById('otp_code').value='{{ demo_code }}'">
+                                <i class="bi bi-box-arrow-in-down me-1"></i> Auto-Fill
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if error %}
+                    <div class="alert alert-danger d-flex align-items-center small py-2 mb-3" role="alert">
+                        <i class="bi bi-exclamation-circle-fill me-2 fs-5"></i>
+                        <div>{{ error }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if request.query_params.get('resent') %}
+                    <div class="alert alert-success d-flex align-items-center small py-2 mb-3" role="alert">
+                        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                        <div>A new verification code has been dispatched.</div>
+                    </div>
+                    {% endif %}
+
+                    <form action="/verify-otp" method="POST">
+                        <input type="hidden" name="email" value="{{ email }}">
+                        <input type="hidden" name="purpose" value="{{ purpose }}">
+
+                        <div class="mb-4 text-center">
+                            <label for="otp_code" class="form-label small fw-semibold text-secondary mb-2">
+                                Enter 6-Digit One-Time Password
+                            </label>
+                            <input type="text"
+                                   class="form-control otp-input-field"
+                                   id="otp_code"
+                                   name="otp_code"
+                                   maxlength="6"
+                                   pattern="\d{6}"
+                                   placeholder="000000"
+                                   required
+                                   autocomplete="one-time-code"
+                                   autofocus>
+                            <div class="form-text small mt-2">Code expires in 10 minutes (Max 5 attempts allowed)</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mb-3">
+                            <i class="bi bi-shield-lock-fill me-1"></i> Verify & Continue
+                        </button>
+                    </form>
+
+                    <form action="/resend-otp" method="POST" class="text-center">
+                        <input type="hidden" name="email" value="{{ email }}">
+                        <input type="hidden" name="purpose" value="{{ purpose }}">
+                        <button type="submit" class="btn btn-link text-decoration-none small text-muted p-0">
+                            Didn't receive the code? <span class="text-primary fw-semibold">Resend OTP</span>
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3 pt-3 border-top">
+                        <a href="/login" class="small text-decoration-none text-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Return to Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

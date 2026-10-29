@@ -13,6 +13,21 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT NOT NULL CHECK (role IN ('supervisor', 'organiser', 'data_manager', 'participant')),
     full_name TEXT NOT NULL,
     department TEXT DEFAULT 'General',
+    is_verified BOOLEAN DEFAULT 1,
+    failed_attempts INTEGER DEFAULT 0,
+    locked_until TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 0.1 OTP Verifications Table (Signup & Password Reset)
+CREATE TABLE IF NOT EXISTS otp_verifications (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    otp_code TEXT NOT NULL,
+    purpose TEXT NOT NULL, -- signup, password_reset
+    payload_json TEXT, -- json of pending details
+    attempts INTEGER DEFAULT 0,
+    expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
