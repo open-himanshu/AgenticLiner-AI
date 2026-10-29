@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}AgenticLiner - Outbox Notification Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h2 class="fw-bold mb-0">Screen #12: Outbox Notification Center</h2>
+                        <span class="badge bg-primary">Transactional Outbox Pattern</span>
+                        <span class="badge badge-kavach">Safe Messaging</span>
+                    </div>
+                    <p class="text-muted mb-0">No email or broadcast leaves the platform until transactions commit. Staged notices can be inspected, scheduled, or released.</p>
+                </div>
+                <div>
+                    <button class="btn btn-success fw-semibold" id="btnReleaseAll">
+                        <i class="bi bi-send-check-fill me-1"></i> Dispatch All Staged Notices
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Compose Announcement -->
+        <div class="col-lg-4">
+            <div class="card card-custom p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-broadcast text-primary me-2"></i>Compose Announcement</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Target Audience</label>
+                    <select class="form-select form-select-sm" id="annAudience">
+                        <option value="all">All Registered Students</option>
+                        <option value="confirmed">Confirmed Attendees Only</option>
+                        <option value="waitlisted">Waitlisted Students</option>
+                        <option value="faculty">Faculty Mentors & Speakers</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Subject Line</label>
+                    <input type="text" class="form-control form-control-sm" id="annSubject" value="Campus AI Hackathon: Reporting Time & Gate QR Details">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Message Body</label>
+                    <textarea class="form-control" id="annMessage" rows="5" placeholder="Draft your announcement...">Attention participants: The gate check-in desk opens at 08:30 AM in Main Auditorium A (Block C). Please have your student ID ready for QR scanning. Refreshments will be distributed upon check-in.</textarea>
+                </div>
+
+                <button class="btn btn-primary w-100 fw-semibold" id="btnStageAnnouncement">
+                    <i class="bi bi-inbox-fill me-1"></i> Stage Announcement to Outbox
+                </button>
+            </div>
+        </div>
+
+        <!-- Outbox Table -->
+        <div class="col-lg-8">
+            <div class="card card-custom p-4 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-envelope-paper-fill text-primary me-2"></i>Outbox Queue & Transmission Log</h5>
+                    <span class="badge bg-light text-dark border">{{ notices|length }} messages recorded</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Recipient</th>
+                                <th>Subject & Preview</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="noticesBody">
+                            {% for n in notices %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ n.recipient }}</td>
+                                <td>
+                                    <strong>{{ n.subject }}</strong>
+                                    <p class="text-muted small mb-0 text-truncate" style="max-width: 280px;">{{ n.message }}</p>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ n.type }}</span></td>
+                                <td>
+                                    {% if n.status == 'sent' %}
+                                    <span class="badge bg-success-subtle text-success border border-success">SENT</span>
+                                    {% elif n.status == 'held' %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning">HELD (STAGED)</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">{{ n.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted">{{ n.created_at[:16] }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No notifications queued in Outbox yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('btnStageAnnouncement').addEventListener('click', async () => {
+        const subject = document.getElementById('annSubject').value.trim();
+        const message = document.getElementById('annMessage').value.trim();
+        const audience = document.getElementById('annAudience').value;
+
+        if (!subject || !message) {
+            alert('Subject and Message are required.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/outbox/stage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    event_id: 'ev_001',
+                    recipient: `group-${audience}@galgotiasuniversity.edu.in`,
+                    subject,
+                    message,
+                    type: 'announcement'
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                location.reload();
+            }
+        } catch (err) {
+            alert('Failed to stage announcement: ' + err);
+        }
+    });
+
+    document.getElementById('btnReleaseAll').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/outbox/release-all', { method: 'POST' });
+            const data = await res.json();
+            alert(`Dispatched ${data.dispatched_count} staged notifications from Outbox!`);
+            location.reload();
+        } catch (err) {
+            alert('Failed to release notices: ' + err);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}AgenticLiner - Student Event Registration{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card card-custom p-4 p-md-5 bg-white">
+                <div class="text-center mb-4">
+                    <span class="badge bg-primary px-3 py-1 text-uppercase mb-2">Official Event Registration</span>
+                    <h2 class="fw-bold text-dark mb-1">Campus AI Innovation Summit 2026</h2>
+                    <p class="text-muted small">School of Artificial Intelligence & Data Science | Galgotias University</p>
+                </div>
+
+                <!-- Registration Form -->
+                <form id="regForm">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Full Name *</label>
+                            <input type="text" class="form-control" id="regName" placeholder="e.g. Aryan Gupta" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">University Email ID *</label>
+                            <input type="email" class="form-control" id="regEmail" placeholder="e.g. aryan@galgotiasuniversity.edu.in" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Department *</label>
+                            <select class="form-select" id="regDept">
+                                <option value="B.Tech AIML" selected>B.Tech AI & ML</option>
+                                <option value="B.Tech CSE">B.Tech Computer Science</option>
+                                <option value="B.Tech Data Science">B.Tech Data Science</option>
+                                <option value="B.Tech Cyber Security">B.Tech Cyber Security</option>
+                                <option value="BCA">BCA</option>
+                                <option value="MCA">MCA</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Academic Year *</label>
+                            <select class="form-select" id="regYear">
+                                <option value="1">1st Year</option>
+                                <option value="2" selected>2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Primary Interests & Focus Areas</label>
+                        <input type="text" class="form-control" id="regInterests" placeholder="e.g. Generative AI, PyTorch, Hackathons, Web3, Algorithms" value="Generative AI, PyTorch, Hackathons">
+                        <div class="form-text" style="font-size: 0.75rem;">Used by Module 4 Recommender to personalize your session timetable.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold">Preferred Track</label>
+                        <select class="form-select" id="regTrack">
+                            <option value="AI Systems & LLMs" selected>Track 1: AI Systems & LLMs</option>
+                            <option value="Competitive Hackathon">Track 2: Competitive Hackathon Track</option>
+                            <option value="Research & Papers">Track 3: Research & Industry Track</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" id="btnSubmitReg">
+                        <i class="bi bi-check2-circle me-1"></i> Register for Event
+                    </button>
+                </form>
+
+                <!-- Result Message Card -->
+                <div id="regResultBox" class="mt-4 p-4 rounded-3 border" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('regForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitReg');
+        const box = document.getElementById('regResultBox');
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Processing Registration...`;
+        box.style.display = 'none';
+
+        const payload = {
+            event_id: 'ev_001',
+            name: document.getElementById('regName').value.trim(),
+            email: document.getElementById('regEmail').value.trim(),
+            department: document.getElementById('regDept').value,
+            year: parseInt(document.getElementById('regYear').value),
+            interests: document.getElementById('regInterests').value.split(',').map(s => s.trim()),
+            preferred_sessions: [document.getElementById('regTrack').value]
+        };
+
+        try {
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-check2-circle me-1"></i> Register for Event`;
+
+            box.style.display = 'block';
+            if (data.success) {
+                const isConfirmed = data.status === 'confirmed';
+                box.className = isConfirmed ? 'mt-4 p-4 rounded-3 border bg-success-subtle border-success' : 'mt-4 p-4 rounded-3 border bg-warning-subtle border-warning';
+                box.innerHTML = `
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi ${isConfirmed ? 'bi-check-circle-fill text-success fs-4' : 'bi-hourglass-split text-warning-emphasis fs-4'}"></i>
+                        <h5 class="fw-bold mb-0 ${isConfirmed ? 'text-success' : 'text-warning-emphasis'}">
+                            Registration Status: ${data.status.toUpperCase()}
+                        </h5>
+                    </div>
+                    <p class="mb-2 small text-dark">${data.message}</p>
+                    <div class="small text-muted border-top pt-2 mt-2">
+                        <span>Registration ID: <b>${data.registration_id}</b></span> • 
+                        <span>Hall Capacity: <b>${data.capacity_filled} / ${data.max_capacity} seats</b></span>
+                    </div>
+                    <div class="mt-3">
+                        <a href="/participant" class="btn btn-sm btn-primary fw-semibold me-2">View Personalized Agenda</a>
+                        <a href="/attendees" class="btn btn-sm btn-outline-dark">View Attendee Roster</a>
+                    </div>
+                `;
+            } else {
+                box.className = 'mt-4 p-4 rounded-3 border bg-danger-subtle border-danger';
+                box.innerHTML = `
+                    <h5 class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle me-1"></i> Registration Notice</h5>
+                    <p class="mb-0 small text-danger-emphasis">${data.message}</p>
+                `;
+            }
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-check2-circle me-1"></i> Register for Event`;
+            alert('Error submitting registration: ' + err);
+        }
+    });
+</script>
+{% endblock %}

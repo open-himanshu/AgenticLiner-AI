@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AgenticLiner - AI Event Management Platform{% endblock %}</title>
+    <!-- Bootstrap 5 CSS via CDN with graceful fallback -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --bs-primary: #1E3A8A;
+            --brand-dark: #0f172a;
+            --brand-accent: #3b82f6;
+            --safety-green: #10b981;
+            --safety-red: #ef4444;
+            --safety-amber: #f59e0b;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .badge-kavach {
+            background-color: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .card-custom {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+        .card-custom:hover {
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .timeline-step {
+            position: relative;
+            padding-left: 28px;
+            margin-bottom: 20px;
+        }
+        .timeline-step::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 24px;
+            bottom: -15px;
+            width: 2px;
+            background: #cbd5e1;
+        }
+        .timeline-step:last-child::before {
+            display: none;
+        }
+        .timeline-icon {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 2px #3b82f6;
+        }
+        .timeline-icon.success {
+            background: #10b981;
+            box-shadow: 0 0 0 2px #10b981;
+        }
+        .timeline-icon.danger {
+            background: #ef4444;
+            box-shadow: 0 0 0 2px #ef4444;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                <span class="fs-4">🚀 AgenticLiner</span>
+                <span class="badge badge-kavach py-1 px-2">🛡️ Kavach Protected</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMain">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 gap-1 small">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/' %}active fw-bold{% endif %}" href="/"><i class="bi bi-shop me-1"></i> Planner</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/autopilot' %}active fw-bold text-warning{% endif %}" href="/autopilot"><i class="bi bi-cpu me-1"></i> Autopilot</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/schedule' %}active fw-bold{% endif %}" href="/schedule"><i class="bi bi-calendar3 me-1"></i> Timetable</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/attendees' %}active fw-bold{% endif %}" href="/attendees"><i class="bi bi-people me-1"></i> Attendees</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/register' %}active fw-bold{% endif %}" href="/register"><i class="bi bi-pencil-square me-1"></i> Register</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/notices' %}active fw-bold{% endif %}" href="/notices"><i class="bi bi-inbox me-1"></i> Outbox</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/participant' %}active fw-bold{% endif %}" href="/participant"><i class="bi bi-person-badge me-1"></i> Student View</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/analytics' %}active fw-bold{% endif %}" href="/analytics"><i class="bi bi-graph-up me-1"></i> Analytics</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-top py-3 mt-5 text-center text-muted small">
+        <div class="container">
+            SparkX 3.0 Innovation Challenge — Challenge #1 | Galgotias University | Team AgenticLiner
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

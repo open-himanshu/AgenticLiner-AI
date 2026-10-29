@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}AgenticLiner - Analytics, Feedback & Verifiable Credentials{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1">Module 6 & 7: Feedback Intelligence & Post-Event Analytics</h2>
+                    <p class="text-muted mb-0">Automated sentiment polarity scoring, theme clustering, attendance metrics, Outbox notification monitor, and QR-verifiable certificates.</p>
+                </div>
+                <div>
+                    <a href="/api/report/pdf/ev_001" class="btn btn-primary fw-semibold me-2">
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download Executive Report (PDF)
+                    </a>
+                    <a href="/api/outbox" target="_blank" class="btn btn-outline-dark fw-semibold">
+                        <i class="bi bi-envelope-paper me-1"></i> Inspect Outbox Log
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Campus KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
+                <span class="text-muted small">Registered Attendees</span>
+                <h3 class="fw-bold text-dark mb-0">150</h3>
+                <span class="text-success small"><i class="bi bi-check-circle me-1"></i>100% hall quota filled</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-success">
+                <span class="text-muted small">Verified Turn-Up Rate</span>
+                <h3 class="fw-bold text-dark mb-0">94.6%</h3>
+                <span class="text-muted small">142 verified QR check-ins</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-warning">
+                <span class="text-muted small">Feedback Sentiment</span>
+                <h3 class="fw-bold text-dark mb-0">88% Pos</h3>
+                <span class="text-muted small">Average Rating: 4.6 / 5.0</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-info">
+                <span class="text-muted small">Logistics Allocated</span>
+                <h3 class="fw-bold text-dark mb-0">100% Feasible</h3>
+                <span class="text-success small">Zero double-bookings</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Module 6: Sentiment & Thematic Insights -->
+        <div class="col-lg-6">
+            <div class="card card-custom p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-chat-heart text-danger me-2"></i>Automated Feedback Intelligence</h5>
+                
+                <!-- Live Feedback Ingestion Form -->
+                <div class="p-3 bg-light rounded border mb-4">
+                    <h6 class="fw-bold small mb-2">Test Live Feedback Ingestion:</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-4">
+                            <select class="form-select form-select-sm" id="fbRating">
+                                <option value="5" selected>⭐⭐⭐⭐⭐ (5)</option>
+                                <option value="4">⭐⭐⭐⭐ (4)</option>
+                                <option value="3">⭐⭐⭐ (3)</option>
+                                <option value="2">⭐⭐ (2)</option>
+                                <option value="1">⭐ (1)</option>
+                            </select>
+                        </div>
+                        <div class="col-8">
+                            <input type="text" class="form-control form-control-sm" id="fbComment" placeholder="Write feedback comment...">
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-primary fw-semibold" id="btnSubmitFeedback">
+                        <i class="bi bi-cpu me-1"></i> Classify Sentiment & Theme
+                    </button>
+                    <span id="feedbackResultTag" class="ms-2 small"></span>
+                </div>
+
+                <!-- Strengths & Concerns Highlight -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded bg-success-subtle border border-success-subtle h-100">
+                            <h6 class="fw-bold text-success mb-2"><i class="bi bi-hand-thumbs-up me-1"></i> Top Strengths</h6>
+                            <ul class="list-unstyled small mb-0 text-success-emphasis">
+                                <li class="mb-1">✓ Hands-on PyTorch coding lab was well explained.</li>
+                                <li class="mb-1">✓ Smooth check-in using QR codes at the gate.</li>
+                                <li>✓ High quality lunch boxes and refreshments.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded bg-danger-subtle border border-danger-subtle h-100">
+                            <h6 class="fw-bold text-danger mb-2"><i class="bi bi-exclamation-triangle me-1"></i> Critical Areas to Improve</h6>
+                            <ul class="list-unstyled small mb-0 text-danger-emphasis">
+                                <li class="mb-1">⚠ Seminar hall sound system was slightly low in row 12.</li>
+                                <li>⚠ Extension board shortage during team coding rounds.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module 7: Verifiable Certificate & Future Recommendations -->
+        <div class="col-lg-6">
+            <div class="card card-custom p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-patch-check-fill text-primary me-2"></i>Verifiable PDF Certificate Issuance</h5>
+                <p class="text-muted small">Every attendee who completes session check-in receives an official certificate with a cryptographic ID and online verification QR code.</p>
+
+                <!-- Interactive Certificate Generation & Verification -->
+                <div class="p-3 rounded bg-light border mb-3">
+                    <h6 class="fw-bold small mb-2"><i class="bi bi-patch-check me-1"></i>Generate Verified Certificate:</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-8">
+                            <input type="text" class="form-control form-control-sm" id="certStudentName" placeholder="Student Full Name" value="Himanshu Sharma">
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-sm btn-primary w-100 fw-semibold" id="btnGenerateCert">
+                                <i class="bi bi-file-earmark-check me-1"></i> Generate
+                            </button>
+                        </div>
+                    </div>
+                    <div id="certResultBox" style="display: none;" class="p-2 mt-2 rounded bg-white border">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <span class="badge bg-success" id="resCertId">CERT-XXXX</span>
+                                <span class="small text-muted ms-1" id="resCertName"></span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="#" id="linkVerifyCert" target="_blank" class="btn btn-sm btn-outline-dark py-0" style="font-size: 0.75rem;">
+                                    <i class="bi bi-qr-code me-1"></i> Verify QR
+                                </a>
+                                <a href="#" id="linkDownloadCert" class="btn btn-sm btn-success py-0" style="font-size: 0.75rem;">
+                                    <i class="bi bi-download me-1"></i> Download PDF
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Advice for Next Edition -->
+                <div class="p-3 rounded bg-light border">
+                    <h6 class="fw-bold small text-primary mb-2"><i class="bi bi-robot me-1"></i> AI Advisory for Next Edition:</h6>
+                    <ul class="list-unstyled small mb-0 text-muted">
+                        <li class="mb-1">💡 <b>Auditorium Sizing:</b> 94.6% turn-up suggests booking Auditorium A instead of Seminar Hall 1 for next hackathon.</li>
+                        <li>💡 <b>Inventory Stock:</b> Increase extension spike boards from 25 to 35 units based on participant feedback.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('btnSubmitFeedback').addEventListener('click', async () => {
+        const rating = parseInt(document.getElementById('fbRating').value);
+        const comment = document.getElementById('fbComment').value.trim();
+        const tag = document.getElementById('feedbackResultTag');
+
+        if (!comment) {
+            alert('Please enter a feedback comment.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/feedback/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event_id: 'ev_001', rating, comment })
+            });
+            const data = await res.json();
+            
+            const sent = data.analysis.sentiment;
+            const badgeClass = sent === 'positive' ? 'bg-success' : (sent === 'negative' ? 'bg-danger' : 'bg-secondary');
+            tag.innerHTML = `<span class="badge ${badgeClass}">${sent.toUpperCase()} (Score: ${data.analysis.score}) | Theme: ${data.themes.join(', ')}</span>`;
+            document.getElementById('fbComment').value = '';
+
+        } catch (err) {
+            alert('Error submitting feedback: ' + err);
+        }
+    });
+
+    document.getElementById('btnGenerateCert').addEventListener('click', async () => {
+        const studentName = document.getElementById('certStudentName').value.trim();
+        if (!studentName) {
+            alert('Please enter student name.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/certificates/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: 'stud_custom_' + Math.floor(Math.random() * 1000),
+                    student_name: studentName,
+                    event_id: 'ev_001',
+                    event_name: 'Galgotias Campus Innovation Hackathon'
+                })
+            });
+            const data = await res.json();
+            
+            document.getElementById('resCertId').innerText = data.certificate_id;
+            document.getElementById('resCertName').innerText = studentName;
+            document.getElementById('linkVerifyCert').href = data.verify_url;
+            document.getElementById('linkDownloadCert').href = `/api/certificates/download/${data.certificate_id}`;
+            document.getElementById('certResultBox').style.display = 'block';
+
+        } catch (err) {
+            alert('Error generating certificate: ' + err);
+        }
+    });
+</script>
+{% endblock %}

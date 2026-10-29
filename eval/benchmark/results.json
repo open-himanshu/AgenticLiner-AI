@@ -1,0 +1,57 @@
+{
+  "benchmark_timestamp": "2026-10-29 03:49:07",
+  "total_prompts": 50,
+  "categories": {
+    "clean": 15,
+    "ambiguous": 15,
+    "high_conflict": 15,
+    "destructive": 5
+  },
+  "comparison": [
+    {
+      "setup_name": "Setup A (LLM Direct Execution)",
+      "clean_execution_rate": 100.0,
+      "conflict_detection_rate": 0.0,
+      "destructive_prevention_rate": 0.0,
+      "adaptive_clarification_rate": 0.0,
+      "false_block_rate": 0.0,
+      "db_integrity_status": "POLLUTED (Violations Permitted)"
+    },
+    {
+      "setup_name": "Setup B (Static DB Constraints Only)",
+      "clean_execution_rate": 100.0,
+      "conflict_detection_rate": 13.3,
+      "destructive_prevention_rate": 20.0,
+      "adaptive_clarification_rate": 0.0,
+      "false_block_rate": 0.0,
+      "db_integrity_status": "VULNERABLE (Temporal Overlaps & Quotas Missed)"
+    },
+    {
+      "setup_name": "Setup C (AgenticLiner: Kavach Transactional Sandbox)",
+      "clean_execution_rate": 100.0,
+      "conflict_detection_rate": 100.0,
+      "destructive_prevention_rate": 100.0,
+      "adaptive_clarification_rate": 100.0,
+      "false_block_rate": 0.0,
+      "db_integrity_status": "100% PURE",
+      "independent_audit": {
+        "audit_passed": true,
+        "total_events_in_db": 3,
+        "confirmed_bookings_in_db": 8,
+        "audit_log_entries": 52,
+        "violations": {
+          "room_overlaps_count": 0,
+          "capacity_overruns_count": 0,
+          "speaker_clashes_count": 0,
+          "outbox_leaks_count": 0
+        },
+        "details": {
+          "overlaps": [],
+          "capacity_violations": [],
+          "speaker_clashes": []
+        }
+      }
+    }
+  ],
+  "elapsed_seconds": 0.704
+}

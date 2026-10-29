@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}AgenticLiner - Intelligent Timetable Scheduler & Conflict Solver{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h2 class="fw-bold mb-0">Module 2: Intelligent Scheduling & Conflict Resolution</h2>
+                        <span class="badge bg-primary">Google OR-Tools CP-SAT</span>
+                    </div>
+                    <p class="text-muted mb-0">Solves hard scheduling constraints: room overlaps, capacity matching, faculty availability, and session dependencies.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-danger fw-bold" id="btnHeroCancel">
+                        <i class="bi bi-exclamation-diamond me-1"></i> Hero Demo: Speaker Cancels
+                    </button>
+                    <button class="btn btn-primary fw-bold" id="btnSolve">
+                        <i class="bi bi-gear-wide-connected me-1"></i> Solve Timetable
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Solver Status Alert -->
+    <div class="row mb-3" id="solverStatusRow" style="display: none;">
+        <div class="col-12">
+            <div class="alert alert-success d-flex align-items-center gap-2 mb-0 py-2" id="solverStatusAlert">
+                <i class="bi bi-check-circle-fill"></i> <span id="solverStatusText">Schedule solved optimally.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Demo Banner -->
+    <div class="row mb-3" id="heroDemoBanner" style="display: none;">
+        <div class="col-12">
+            <div class="alert alert-warning border border-warning p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1"><i class="bi bi-robot me-1"></i> Autonomous Conflict Resolution Triggered:</h6>
+                        <p class="mb-1 small" id="heroDemoExplanation"></p>
+                    </div>
+                    <span class="badge bg-dark">Outbox Notice Staged</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timetable Grid & Configuration -->
+    <div class="row g-4">
+        <!-- Sessions Input / Review -->
+        <div class="col-lg-4">
+            <div class="card card-custom p-4 bg-white h-100">
+                <h5 class="fw-bold mb-3"><i class="bi bi-list-task text-primary me-2"></i>Sessions to Schedule</h5>
+                
+                <div class="list-group list-group-flush small" id="sessionsList">
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>1. Opening Keynote & Welcome</strong>
+                            <span class="badge bg-secondary">250 seats</span>
+                        </div>
+                        <span class="text-muted d-block" id="spkSess1">Speaker: Dr. Manish Raj (Dean SoAI)</span>
+                        <span class="badge bg-info-subtle text-info border">No prerequisites</span>
+                    </div>
+
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>2. Generative AI Masterclass</strong>
+                            <span class="badge bg-secondary">120 seats</span>
+                        </div>
+                        <span class="text-muted d-block" id="spkSess2">Speaker: Dr. Vartika Puri</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border">Depends on Keynote</span>
+                    </div>
+
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>3. PyTorch Deep Learning Lab</strong>
+                            <span class="badge bg-secondary">50 seats</span>
+                        </div>
+                        <span class="text-muted d-block">Speaker: Prof. Akhilesh Sir</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border">Depends on GenAI Masterclass</span>
+                    </div>
+
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>4. Python for Autonomous Agents</strong>
+                            <span class="badge bg-secondary">80 seats</span>
+                        </div>
+                        <span class="text-muted d-block">Speaker: Prof. Niraj Sir</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border">Depends on Keynote</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="fw-bold small text-muted text-uppercase mb-2">Available Campus Venues:</h6>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for r in rooms %}
+                        <span class="badge bg-light text-dark border">{{ r.name }} ({{ r.capacity }} seats)</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timetable Result View -->
+        <div class="col-lg-8">
+            <div class="card card-custom p-4 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-calendar3-range text-primary me-2"></i>Generated Conflict-Free Timetable</h5>
+                    <a href="/flyer/ev_001" target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-file-earmark-richtext me-1"></i> Print Timetable Flyer
+                    </a>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle text-center small" id="timetableGrid">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 25%;">Time Slot</th>
+                                <th style="width: 40%;">Scheduled Session</th>
+                                <th style="width: 25%;">Allocated Hall</th>
+                                <th style="width: 10%;">Capacity Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timetableBody">
+                            <tr>
+                                <td colspan="4" class="py-5 text-muted">Click <b>Solve Timetable</b> to run the Google OR-Tools CP-SAT solver.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('btnSolve').addEventListener('click', async () => {
+        const btn = document.getElementById('btnSolve');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Solving...`;
+
+        try {
+            const res = await fetch('/api/schedule/solve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-gear-wide-connected me-1"></i> Solve Timetable`;
+
+            const alertRow = document.getElementById('solverStatusRow');
+            const alertText = document.getElementById('solverStatusText');
+            const tbody = document.getElementById('timetableBody');
+
+            alertRow.style.display = 'block';
+            tbody.innerHTML = '';
+
+            if (data.success && data.schedule.length > 0) {
+                alertText.innerText = `CP-SAT Status: ${data.status} | ${data.total_sessions_scheduled} sessions scheduled with zero room or speaker clashes.`;
+                
+                data.schedule.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="fw-bold text-primary">${item.slot_time}</td>
+                        <td class="text-start">
+                            <strong>${item.session_title}</strong>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">${item.room_name}</span></td>
+                        <td><span class="badge bg-success-subtle text-success border border-success">Feasible</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-gear-wide-connected me-1"></i> Solve Timetable`;
+            alert('Failed to solve schedule: ' + err);
+        }
+    });
+
+    // Hero Demo: Speaker Cancellation
+    document.getElementById('btnHeroCancel').addEventListener('click', async () => {
+        const btn = document.getElementById('btnHeroCancel');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Re-planning...`;
+
+        try {
+            const res = await fetch('/api/schedule/hero-speaker-cancel', { method: 'POST' });
+            const data = await res.json();
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-exclamation-diamond me-1"></i> Hero Demo: Speaker Cancels`;
+
+            const banner = document.getElementById('heroDemoBanner');
+            const explanation = document.getElementById('heroDemoExplanation');
+            const spk2 = document.getElementById('spkSess2');
+            const tbody = document.getElementById('timetableBody');
+
+            banner.style.display = 'block';
+            explanation.innerHTML = `
+                <b>${data.original_speaker}</b> cancelled. The system matched substitute <b>${data.substitute_allocated}</b> (${data.match_reason}).<br/>
+                CP-SAT re-solved the timetable with minimum displacement, verified safety via Kavach, and staged broadcast update notices in Outbox.
+            `;
+            spk2.innerHTML = `Speaker: <strong class="text-danger">${data.substitute_allocated}</strong> <span class="badge bg-warning text-dark">Substitute</span>`;
+
+            tbody.innerHTML = '';
+            data.new_schedule.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold text-primary">${item.slot_time}</td>
+                    <td class="text-start">
+                        <strong>${item.session_title}</strong>
+                        ${item.session_id === 'sess_02' ? '<span class="badge bg-warning text-dark ms-2">Substitute Reassigned</span>' : ''}
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${item.room_name}</span></td>
+                    <td><span class="badge bg-success-subtle text-success border border-success">Feasible</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-exclamation-diamond me-1"></i> Hero Demo: Speaker Cancels`;
+            alert('Error running hero demo: ' + err);
+        }
+    });
+</script>
+{% endblock %}

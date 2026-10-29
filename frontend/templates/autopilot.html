@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}AgenticLiner - Autopilot Agentic Engine{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h2 class="fw-bold mb-0">🤖 Autopilot Agentic Engine</h2>
+                        <span class="badge bg-primary">Autonomous Tool-Calling</span>
+                        <span class="badge badge-kavach">Kavach Sandboxed</span>
+                    </div>
+                    <p class="text-muted mb-0">One single natural-language instruction runs the multi-step campus venue discovery, logistics allocation, and notification workflow with built-in transactional rollback protection.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Input & Control Panel -->
+        <div class="col-lg-4">
+            <div class="card card-custom p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-chat-left-dots text-primary me-2"></i>Organiser Request</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Event Prompt</label>
+                    <textarea class="form-control" id="agentPrompt" rows="3" placeholder="Describe the campus event...">Organize a 2-day campus AI hackathon for 150 students with coding workshops, buffet lunch, extension spike boards and stage mics.</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Target Event Date</label>
+                    <input type="date" class="form-control form-control-sm" id="agentDate" value="2026-11-28">
+                    <div class="form-text" style="font-size: 0.75rem;">Default is set to 28 Nov (free halls). 25 Nov has active bookings to test Kavach conflict rejection.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Test Scenarios (Quick Fill):</label>
+                    <div class="d-flex flex-column gap-1">
+                        <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize a 2-day campus AI hackathon for 150 students with coding workshops, buffet lunch, extension spike boards and stage mics.', '2026-11-28')">
+                            <i class="bi bi-play-circle text-success me-1"></i> Clean Success: 150 Students (28 Nov)
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize an annual dance performance for 200 students with high-power sound system, stage LED lights and snacks.', '2026-11-29')">
+                            <i class="bi bi-play-circle text-primary me-1"></i> Cultural: 200 Students (29 Nov)
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize a rival campus hackathon for 150 students in Auditorium A.', '2026-11-25')">
+                            <i class="bi bi-shield-x text-warning me-1"></i> Kavach Test: Hall Overlap Clash (25 Nov)
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize an all-university festival for 750 students in a single hall.', '2026-11-28')">
+                            <i class="bi bi-exclamation-triangle text-danger me-1"></i> Kavach Test: 750 Over-Capacity
+                        </button>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary w-100 fw-bold py-2 shadow-sm" id="btnRunAgent">
+                    <i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent
+                </button>
+            </div>
+
+            <!-- Kavach Mechanism Card -->
+            <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
+                <h6 class="fw-bold mb-2"><i class="bi bi-shield-lock text-primary me-1"></i> Kavach Campus Guarantees</h6>
+                <ul class="list-unstyled small mb-0 text-muted">
+                    <li class="mb-1">✓ <b>Isolated Savepoint:</b> All DB mutations run inside a checkpoint.</li>
+                    <li class="mb-1">✓ <b>No Overlap:</b> Instant conflict rejection on double booking.</li>
+                    <li class="mb-1">✓ <b>Capacity Guard:</b> Rejects bookings where attendance > room seats.</li>
+                    <li>✓ <b>Outbox Staging:</b> No notification leaves campus until commit.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Center & Right Column: Live Activity Panel & Output -->
+        <div class="col-lg-8">
+            <div class="card card-custom p-4 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-activity text-primary me-2"></i>Live Activity Panel</h5>
+                        <p class="text-muted small mb-0">Autonomous tool execution, invariant checks & transaction timeline.</p>
+                    </div>
+                    <div id="statusBadgeContainer">
+                        <span class="badge bg-secondary">Idle</span>
+                    </div>
+                </div>
+
+                <!-- Live Timeline Container -->
+                <div id="timelineContainer" class="py-2">
+                    <p class="text-muted text-center my-5" id="timelinePlaceholder">
+                        <i class="bi bi-clock-history fs-1 d-block text-secondary mb-2"></i>
+                        Click <b>Run Autopilot Agent</b> to start autonomous execution.
+                    </p>
+                </div>
+
+                <!-- Final Booking Summary Card (Visible on Completion) -->
+                <div id="summaryCard" class="mt-4 p-4 rounded-3 border bg-light" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <span class="badge bg-success mb-1">Transaction Committed</span>
+                            <h5 class="fw-bold mb-0" id="summaryTitle">Campus Logistics Successfully Allocated</h5>
+                        </div>
+                    </div>
+                    <div class="row g-3 small">
+                        <div class="col-md-6">
+                            <div class="p-2 bg-white rounded border">
+                                <span class="text-muted d-block">Allocated Venue:</span>
+                                <strong id="summaryVenue">-</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 bg-white rounded border">
+                                <span class="text-muted d-block">Logistics Status:</span>
+                                <strong class="text-success">Committed & Staged to Outbox</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-end">
+                        <a href="/schedule" class="btn btn-sm btn-outline-primary fw-semibold me-2">
+                            <i class="bi bi-calendar3 me-1"></i> View In Timetable
+                        </a>
+                        <a href="/analytics" class="btn btn-sm btn-primary fw-semibold">
+                            <i class="bi bi-card-checklist me-1"></i> Open Analytics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function setScenario(promptText, dateValue) {
+        document.getElementById('agentPrompt').value = promptText;
+        if (dateValue) {
+            document.getElementById('agentDate').value = dateValue;
+        }
+    }
+
+    document.getElementById('btnRunAgent').addEventListener('click', async () => {
+        const prompt = document.getElementById('agentPrompt').value;
+        const targetDate = document.getElementById('agentDate').value || '2026-11-28';
+        const btn = document.getElementById('btnRunAgent');
+        const container = document.getElementById('timelineContainer');
+        const statusContainer = document.getElementById('statusBadgeContainer');
+        const summaryCard = document.getElementById('summaryCard');
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Agent Running...`;
+        statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Executing Tools</span>`;
+        container.innerHTML = '';
+        summaryCard.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/autopilot/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt, date: targetDate })
+            });
+
+            const result = await response.json();
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+
+            if (result.timeline && result.timeline.length > 0) {
+                result.timeline.forEach((step, idx) => {
+                    const isSuccess = step.status === 'committed' || step.status === 'completed';
+                    const isRollback = step.status === 'rolled_back';
+
+                    const div = document.createElement('div');
+                    div.className = 'timeline-step';
+                    div.innerHTML = `
+                        <div class="timeline-icon ${isSuccess ? 'success' : (isRollback ? 'danger' : '')}"></div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="badge bg-dark me-2">Step ${step.step}</span>
+                                <strong class="text-uppercase" style="font-size: 0.85rem;">${step.tool.replace(/_/g, ' ')}</strong>
+                                <span class="badge ${isSuccess ? 'bg-success-subtle text-success border border-success' : (isRollback ? 'bg-danger-subtle text-danger border border-danger' : 'bg-secondary')} ms-2" style="font-size: 0.7rem;">
+                                    ${step.status.toUpperCase()}
+                                </span>
+                            </div>
+                        </div>
+                        <p class="mb-1 mt-1 text-secondary small">${step.summary}</p>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            if (result.success) {
+                statusContainer.innerHTML = `<span class="badge bg-success">Committed & Dispatched</span>`;
+                document.getElementById('summaryTitle').innerText = result.event_name;
+                document.getElementById('summaryVenue').innerText = result.venue;
+                summaryCard.style.display = 'block';
+            } else {
+                statusContainer.innerHTML = `<span class="badge bg-danger">Kavach Invariant Triggered</span>`;
+                const errDiv = document.createElement('div');
+                errDiv.className = 'alert alert-danger p-3 rounded-3 small mt-3';
+                errDiv.innerHTML = `
+                    <h6 class="fw-bold mb-1"><i class="bi bi-shield-x me-1"></i> Allocation Rolled Back by Kavach Safety Layer</h6>
+                    <p class="mb-1">${result.error || (result.violation && result.violation.detail)}</p>
+                    ${result.violation && result.violation.suggestion ? `<strong>Suggestion:</strong> ${result.violation.suggestion}` : ''}
+                `;
+                container.appendChild(errDiv);
+            }
+
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+            statusContainer.innerHTML = `<span class="badge bg-danger">System Error</span>`;
+            alert('Failed to execute autopilot run: ' + err);
+        }
+    });
+</script>
+{% endblock %}
