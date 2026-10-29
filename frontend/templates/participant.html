@@ -95,6 +95,9 @@
                                     <a href="{{ p.verify_url }}" target="_blank" class="btn btn-sm btn-outline-success fw-semibold">
                                         <i class="bi bi-camera me-1"></i> Simulate Gate Scan
                                     </a>
+                                    <button class="btn btn-sm btn-outline-primary fw-semibold" onclick="openFeedbackModal('{{ p.event_id }}', '{{ p.event_name }}')">
+                                        <i class="bi bi-star me-1"></i> Give Feedback
+                                    </button>
                                     <a href="/flyer/{{ p.event_id }}" target="_blank" class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-file-earmark-richtext me-1"></i> Event Flyer
                                     </a>
@@ -256,5 +259,87 @@
             document.getElementById('btnSendChat').click();
         }
     });
+
+    let feedbackModalInstance;
+    function openFeedbackModal(eventId, eventName) {
+        document.getElementById('modalEventId').value = eventId;
+        document.getElementById('feedbackModalTitle').innerHTML = `<i class="bi bi-star-fill text-warning me-2"></i>Feedback: ${eventName}`;
+        document.getElementById('modalComment').value = '';
+        document.getElementById('modalAlert').style.display = 'none';
+        if (!feedbackModalInstance) {
+            feedbackModalInstance = new bootstrap.Modal(document.getElementById('feedbackModal'));
+        }
+        feedbackModalInstance.show();
+    }
+
+    document.getElementById('btnModalSubmitFeedback').addEventListener('click', async () => {
+        const eventId = document.getElementById('modalEventId').value;
+        const rating = parseInt(document.getElementById('modalRating').value);
+        const comment = document.getElementById('modalComment').value.trim();
+        const alertBox = document.getElementById('modalAlert');
+
+        if (!comment) {
+            alert('Please write your comments.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/feedback/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    event_id: eventId,
+                    student_id: '{{ student.id }}',
+                    rating: rating,
+                    comment: comment
+                })
+            });
+            const data = await res.json();
+            alertBox.className = 'small alert alert-success py-2';
+            alertBox.innerHTML = `✓ Feedback recorded! Sentiment: <b>${data.analysis.sentiment.toUpperCase()}</b> | Themes: <b>${data.themes.join(', ')}</b>`;
+            alertBox.style.display = 'block';
+            setTimeout(() => {
+                if (feedbackModalInstance) feedbackModalInstance.hide();
+            }, 1500);
+        } catch (e) {
+            alert('Failed to submit feedback: ' + e);
+        }
+    });
 </script>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="feedbackModalTitle"><i class="bi bi-star-fill text-warning me-2"></i>Submit Event Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalEventId">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Overall Event Rating</label>
+                    <select class="form-select" id="modalRating">
+                        <option value="5" selected>⭐⭐⭐⭐⭐ (5 - Exceptional)</option>
+                        <option value="4">⭐⭐⭐⭐ (4 - Very Good)</option>
+                        <option value="3">⭐⭐⭐ (3 - Average)</option>
+                        <option value="2">⭐⭐ (2 - Below Expectations)</option>
+                        <option value="1">⭐ (1 - Needs Improvement)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Your Feedback / Review</label>
+                    <textarea class="form-control" id="modalComment" rows="3" placeholder="Share your experience (e.g., keynote quality, workshop hands-on depth, food/refreshments, hall comfort)..."></textarea>
+                </div>
+                <div id="modalAlert" class="small alert alert-info py-2" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary fw-bold" id="btnModalSubmitFeedback">
+                    <i class="bi bi-send-check me-1"></i> Submit Feedback
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -41,6 +41,12 @@ from backend.services.schedule_service import (
     handle_hero_speaker_cancellation,
     export_schedule_csv
 )
+from backend.services.analytics_service import (
+    get_analytics_dashboard_data,
+    record_feedback,
+    issue_verifiable_certificate,
+    verify_certificate_by_id
+)
 from backend.api.dependencies import require_auth, require_role, get_session_user
 
 app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
@@ -422,28 +428,20 @@ async def participant_page(
 @app.get("/analytics", response_class=HTMLResponse)
 async def analytics_page(
     request: Request,
+    event_id: Optional[str] = None,
     user: Dict[str, Any] = Depends(require_role(["supervisor", "organiser"]))
 ):
     """Feedback Insights, Post-Event Attendance Metrics & Verifiable Credentials"""
     events = fetch_all("SELECT id, name FROM events")
-    total_reg = fetch_one("SELECT count(*) as count FROM registrations WHERE status = 'confirmed'")["count"]
-    total_checked = fetch_one("SELECT count(*) as count FROM attendance")["count"]
-    turnout_rate = round((total_checked / total_reg * 100), 1) if total_reg > 0 else 0.0
-    fb_row = fetch_one("SELECT count(*) as total, avg(rating) as avg_rating FROM feedback")
-    fb_count = fb_row["total"] if fb_row else 0
-    avg_rating = round(fb_row["avg_rating"], 1) if fb_row and fb_row["avg_rating"] else 0.0
-
+    analytics_data = get_analytics_dashboard_data(event_id=event_id)
     return templates.TemplateResponse(
         request=request,
         name="analytics.html",
         context={
             "user": user,
             "events": events,
-            "total_reg": total_reg,
-            "total_checked": total_checked,
-            "turnout_rate": turnout_rate,
-            "fb_count": fb_count,
-            "avg_rating": avg_rating
+            "selected_event_id": event_id or "",
+            **analytics_data
         }
     )
 
@@ -657,24 +655,18 @@ async def ask_assistant(req: AskAssistantRequest):
 @app.post("/api/feedback/submit")
 async def submit_feedback(fb: FeedbackSubmission):
     """Module 6: Feedback submission, sentiment scoring, and theme detection."""
-    analysis = feedback_analyzer.analyze_sentiment(fb.comment, rating=fb.rating)
-    themes = feedback_analyzer.detect_themes(fb.comment)
-    
-    # Ensure event exists to prevent foreign key error
-    ev = fetch_one("SELECT id FROM events WHERE id = ?", (fb.event_id,))
-    if not ev:
-        execute_query(
-            "INSERT OR IGNORE INTO events (id, name, brief, event_type) VALUES (?, 'Campus Event', 'Feedback Event', 'workshop')",
-            (fb.event_id,)
-        )
-
-    fb_id = f"fb_{uuid.uuid4().hex[:8]}"
-    execute_query("""
-        INSERT INTO feedback (id, event_id, student_id, rating, comment, sentiment, sentiment_score, theme)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (fb_id, fb.event_id, fb.student_id, fb.rating, fb.comment, analysis["sentiment"], analysis["score"], themes[0]))
-
-    return {"status": "saved", "feedback_id": fb_id, "analysis": analysis, "themes": themes}
+    result = record_feedback(
+        event_id=fb.event_id,
+        rating=fb.rating,
+        comment=fb.comment,
+        student_id=fb.student_id
+    )
+    return JSONResponse(content={
+        "status": "saved",
+        "feedback_id": result["feedback_id"],
+        "analysis": {"sentiment": result["sentiment"], "score": result["sentiment_score"]},
+        "themes": result["themes"]
+    })
 
 @app.get("/api/analytics/{event_id}")
 async def get_event_analytics(event_id: str):
@@ -693,32 +685,16 @@ async def get_outbox():
     notices = fetch_all("SELECT * FROM outbox ORDER BY created_at DESC LIMIT 25")
     return {"outbox": notices}
 
-@app.get("/verify/{cert_id}")
-async def verify_certificate(cert_id: str):
+@app.get("/verify/{cert_id}", response_class=HTMLResponse)
+async def verify_certificate(cert_id: str, request: Request):
     """Online Verification Endpoint for certificates."""
-    cert = fetch_one("SELECT * FROM certificates WHERE id = ?", (cert_id,))
-    if not cert:
-        return HTMLResponse("<h3>Certificate Not Found or Invalid</h3>", status_code=404)
-
-    execute_query("UPDATE certificates SET verified_count = verified_count + 1 WHERE id = ?", (cert_id,))
-    student = fetch_one("SELECT name, department, email FROM students WHERE id = ?", (cert["student_id"],))
-    event = fetch_one("SELECT name FROM events WHERE id = ?", (cert["event_id"],))
-
-    return HTMLResponse(f"""
-    <html>
-        <head><title>Certificate Verified - Galgotias University</title></head>
-        <body style="font-family: Arial; padding: 40px; background: #f8fafc; text-align: center;">
-            <div style="max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-                <h2 style="color: #1e3a8a;">Galgotias University</h2>
-                <div style="background: #ecfdf5; color: #065f46; padding: 12px; border-radius: 8px; font-weight: bold; margin: 20px 0;">
-                    Official Verified Certificate: {cert_id}
-                </div>
-                <p><b>Recipient:</b> {student['name'] if student else 'Student'}</p>
-                <p><b>Department:</b> {student['department'] if student else 'School of AI'}</p>
-                <p><b>Event:</b> {event['name'] if event else 'Campus Event'}</p>
-                <p><b>Issued On:</b> {cert['issued_at']}</p>
-                <p style="color: #6b7280; font-size: 13px;">This credential has been verified against the immutable AgenticLiner registry.</p>
-            </div>
-        </body>
-    </html>
-    """)
+    cert_info = verify_certificate_by_id(cert_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="verify_certificate.html",
+        context={
+            "cert_id": cert_id,
+            "cert": cert_info
+        },
+        status_code=200 if cert_info else 404
+    )
