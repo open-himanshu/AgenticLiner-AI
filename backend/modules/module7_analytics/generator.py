@@ -190,6 +190,20 @@ class EventAnalyticsEngine:
 
         # Store in certificates database table
         with get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM students WHERE id = ?", (student_id,))
+            if not cur.fetchone():
+                conn.execute(
+                    "INSERT OR IGNORE INTO students (id, name, email, department, year) VALUES (?, ?, ?, 'Engineering', 3)",
+                    (student_id, student_name, f"{student_id}@galgotias.edu")
+                )
+            cur.execute("SELECT id FROM events WHERE id = ?", (event_id,))
+            if not cur.fetchone():
+                conn.execute(
+                    "INSERT OR IGNORE INTO events (id, name, brief, event_type) VALUES (?, ?, 'Academic event', 'workshop')",
+                    (event_id, event_name)
+                )
+
             conn.execute(
                 "INSERT INTO certificates (id, student_id, event_id, qr_code_path, pdf_path) VALUES (?, ?, ?, ?, ?)",
                 (cert_id, student_id, event_id, str(qr_path), str(pdf_path))

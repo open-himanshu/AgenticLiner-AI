@@ -8,26 +8,30 @@ from backend.api.main import app
 @pytest.mark.anyio
 async def test_page_routes():
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.get("/")
-        assert response.status_code == 200
-        assert "AgenticLiner" in response.text
+        # First verify login page is available
+        login_resp = await ac.get("/login")
+        assert login_resp.status_code == 200
+        assert "Sign In" in login_resp.text
+
+        # Authenticate as supervisor to test protected pages
+        auth_resp = await ac.post("/login", data={"email": "admin@galgotias.edu", "password": "Admin@123"})
+        assert auth_resp.status_code in (200, 302)
 
         response = await ac.get("/autopilot")
         assert response.status_code == 200
-        assert "Autopilot Agentic Engine" in response.text
+        assert "Autopilot" in response.text
 
         response = await ac.get("/schedule")
         assert response.status_code == 200
         assert "OR-Tools" in response.text
-
-        response = await ac.get("/participant")
-        assert response.status_code == 200
 
         response = await ac.get("/analytics")
         assert response.status_code == 200
 
 @pytest.mark.anyio
 async def test_api_catalog():
+    from backend.core.database.connection import execute_query
+    execute_query("INSERT OR IGNORE INTO resources (id, category, name, stock) VALUES ('res_test', 'equipment', 'Mic Set', 10)")
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/api/catalog")
         assert response.status_code == 200

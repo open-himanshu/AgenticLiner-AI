@@ -27,6 +27,8 @@ htmlcov/
 *.log
 backend/data/generated_docs/
 frontend/static/uploads/
+cloudflared.exe
+*.exe
 .DS_Store
 Thumbs.db
 .idea/

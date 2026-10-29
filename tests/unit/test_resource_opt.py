@@ -25,6 +25,9 @@ def test_smart_recommendations():
     assert any("Lunch Box" in name or "Snack Box" in name for name in rec_names)
 
 def test_campus_requisition_plan():
+    from backend.core.database.connection import execute_query
+    execute_query("INSERT OR IGNORE INTO resources (id, name, category, stock, allocated_stock, unit) VALUES ('res_mic_cordless', 'Cordless Mics', 'equipment', 10, 0, 'unit')")
+    execute_query("INSERT OR IGNORE INTO resources (id, name, category, stock, allocated_stock, unit) VALUES ('res_food_lunch', 'Packed Lunch', 'food', 500, 0, 'pack')")
     optimizer = ResourceOptimizer()
     preds = optimizer.estimate_resources(headcount=120, duration_hours=4.0, event_type="seminar")
     plan = optimizer.build_requisition_plan(preds)
