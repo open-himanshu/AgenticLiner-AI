@@ -30,6 +30,12 @@ from backend.services.admin_service import reset_all_operational_data
 from backend.api.auth_routes import router as auth_router, ROLE_DASHBOARDS
 from backend.api.inventory_routes import router as inventory_router
 from backend.api.event_routes import router as event_router
+from backend.api.pass_routes import router as pass_router
+from backend.services.pass_service import (
+    get_or_create_student_profile,
+    get_student_passes,
+    get_personalized_recommendations_for_student
+)
 from backend.api.dependencies import require_auth, require_role, get_session_user
 
 app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
@@ -61,6 +67,9 @@ app.include_router(inventory_router)
 
 # Include Event Workflow & Approvals Router (Phase 5)
 app.include_router(event_router)
+
+# Include Student Pass & QR Scanning Router
+app.include_router(pass_router)
 
 # Custom Exception Handlers for Strict RBAC & Unauthenticated Redirects
 @app.exception_handler(HTTPException)
@@ -356,10 +365,13 @@ async def attendees_page(
 async def register_page(request: Request):
     """Screen #8: Public Student Registration Portal"""
     user = get_session_user(request)
+    events = fetch_all("SELECT id, name, event_type, expected_participants FROM events WHERE approval_status IN ('approved', 'auto_approved') ORDER BY created_at DESC")
+    if not events:
+        events = fetch_all("SELECT id, name, event_type, expected_participants FROM events ORDER BY created_at DESC")
     return templates.TemplateResponse(
         request=request,
         name="register.html",
-        context={"user": user}
+        context={"user": user, "events": events}
     )
 
 @app.get("/notices", response_class=HTMLResponse)
@@ -380,16 +392,23 @@ async def participant_page(
     request: Request,
     user: Dict[str, Any] = Depends(require_role(["participant", "supervisor"]))
 ):
-    """Personalized Recommendations, Clash-Free Agenda & Grounded Assistant"""
-    students = fetch_all("SELECT id, name, department, interests FROM students LIMIT 20")
-    events = fetch_all("SELECT id, name FROM events")
+    """Personalized Recommendations, Clash-Free Agenda & Live Digital QR Passes"""
+    email = user.get("email", "student@galgotias.edu")
+    student = get_or_create_student_profile(email, name=user.get("full_name", "Student Participant"))
+    
+    base_url = str(request.base_url).rstrip("/")
+    passes = get_student_passes(email, base_url=base_url)
+    recommendations = get_personalized_recommendations_for_student(student)
+    
     return templates.TemplateResponse(
         request=request,
         name="participant.html",
         context={
             "user": user,
-            "students": students,
-            "events": events
+            "student": student,
+            "passes": passes,
+            "recommendations": recommendations.get("recommended_sessions", []),
+            "peers": recommendations.get("recommended_peers", [])
         }
     )
 
@@ -577,6 +596,11 @@ async def solve_schedule_api(payload: Optional[Dict[str, Any]] = None):
     """Module 2: Solves conflict-free timetable using Google OR-Tools CP-SAT."""
     payload = payload or {}
     rooms = fetch_all("SELECT id, name, capacity FROM rooms")
+    if not rooms:
+        rooms = [
+            {"id": "room_01", "name": "Main Auditorium A", "capacity": 300},
+            {"id": "room_02", "name": "Auditorium B", "capacity": 150}
+        ]
     slots = payload.get("slots", ["09:30-11:00", "11:15-12:45", "13:45-15:15", "15:30-17:00"])
     sessions = payload.get("sessions", [
         {"id": "sess_01", "title": "Opening Keynote & Welcome", "expected_attendance": 250, "speaker_id": "spk_04", "depends_on": None},
@@ -593,6 +617,11 @@ async def solve_schedule_api(payload: Optional[Dict[str, Any]] = None):
 async def hero_speaker_cancellation_demo():
     """Hero Demo: Speaker cancellation, replacement matching, re-scheduling, and Outbox alert."""
     rooms = fetch_all("SELECT id, name, capacity FROM rooms")
+    if not rooms:
+        rooms = [
+            {"id": "room_01", "name": "Main Auditorium A", "capacity": 300},
+            {"id": "room_02", "name": "Auditorium B", "capacity": 150}
+        ]
     slots = ["09:30-11:00", "11:15-12:45", "13:45-15:15", "15:30-17:00"]
     
     sessions = [
