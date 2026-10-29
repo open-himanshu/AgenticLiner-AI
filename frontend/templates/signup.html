@@ -64,6 +64,26 @@
         }
         .divider:not(:empty)::before { margin-right: .75em; }
         .divider:not(:empty)::after { margin-left: .75em; }
+        .google-account-item {
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+        .google-account-item:hover {
+            background-color: #f1f5f9;
+        }
+        .google-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body>
@@ -90,14 +110,14 @@
                     {% endif %}
 
                     <!-- OPTION B: GOOGLE SIGN-UP -->
-                    <button type="button" class="btn btn-google w-100 py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm mb-2" onclick="triggerGoogleSignUp()">
+                    <button type="button" class="btn btn-google w-100 py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm mb-2" onclick="openGoogleSignupModal()">
                         <svg width="18" height="18" viewBox="0 0 18 18">
                             <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
                             <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
                             <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"/>
                             <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
                         </svg>
-                        <span>Sign up with Google (Instant Verification)</span>
+                        <span class="fw-semibold">Sign up with Google (Instant Verification)</span>
                     </button>
 
                     <div class="divider">OR REGISTER WITH EMAIL & OTP</div>
@@ -199,6 +219,68 @@
     </div>
 </div>
 
+<!-- GOOGLE SIGNUP MODAL -->
+<div class="modal fade" id="googleSignupModal" tabindex="-1" aria-labelledby="googleSignupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <svg width="32" height="32" viewBox="0 0 18 18">
+                        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+                        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                        <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"/>
+                        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+                    </svg>
+                    <h5 class="fw-bold mt-2 mb-1" id="googleSignupModalLabel">Sign Up with Google</h5>
+                    <p class="small text-muted mb-0">Select Google account for <strong>AgenticLiner</strong></p>
+                </div>
+
+                <div id="googleSignupLoadingNotice" class="alert alert-info py-2 d-none text-center small mb-3">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Creating account with Google...
+                </div>
+
+                <!-- Account List -->
+                <div class="list-group list-group-flush mb-3">
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('himanshugupta00727@gmail.com', 'Himanshu Gupta')">
+                        <div class="google-avatar bg-primary">H</div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-semibold text-truncate">Himanshu Gupta</div>
+                            <div class="small text-muted text-truncate">himanshugupta00727@gmail.com</div>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Google</span>
+                    </div>
+
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('student@galgotias.edu', 'Campus Student')">
+                        <div class="google-avatar bg-success">G</div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-semibold text-truncate">Campus Student</div>
+                            <div class="small text-muted text-truncate">student@galgotias.edu</div>
+                        </div>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small">Campus</span>
+                    </div>
+                </div>
+
+                <!-- Custom Email Entry -->
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold text-secondary">Or Enter Custom Google Account:</label>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="email" id="customSignupGoogleEmail" class="form-control" placeholder="your.name@gmail.com">
+                        <button class="btn btn-primary" type="button" onclick="submitCustomSignupGoogleAccount()">Sign Up</button>
+                    </div>
+                </div>
+
+                <div class="text-center pt-2 border-top">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 function togglePassword(inputId, btn) {
     const field = document.getElementById(inputId);
@@ -265,14 +347,17 @@ function updateReq(elemId, isValid, label) {
     }
 }
 
-// Google Sign-Up Trigger
-async function triggerGoogleSignUp() {
+function openGoogleSignupModal() {
+    const modalEl = document.getElementById('googleSignupModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+async function signupWithGoogleAccount(email, name) {
     const role = document.getElementById('role').value;
     const department = document.getElementById('department').value;
-    const name = prompt("Enter your Full Name for Google Sign-Up:", "Dr. Google Faculty");
-    if (name === null) return;
-    const email = prompt("Enter your Google Account email:", "faculty.google@galgotias.edu");
-    if (email === null) return;
+    const notice = document.getElementById('googleSignupLoadingNotice');
+    if (notice) notice.classList.remove('d-none');
 
     try {
         const res = await fetch('/auth/google', {
@@ -289,10 +374,24 @@ async function triggerGoogleSignUp() {
         const data = await res.json();
         if (data.success && data.redirect_url) {
             window.location.href = data.redirect_url;
+        } else {
+            alert('Google sign-up failed: ' + (data.detail || 'Unknown error'));
+            if (notice) notice.classList.add('d-none');
         }
     } catch (err) {
-        alert("Google sign up failed: " + err);
+        alert('Error connecting to Google sign-up: ' + err);
+        if (notice) notice.classList.add('d-none');
     }
+}
+
+function submitCustomSignupGoogleAccount() {
+    const email = document.getElementById('customSignupGoogleEmail').value.trim();
+    if (!email || !email.includes('@')) {
+        alert('Please enter a valid Google email address.');
+        return;
+    }
+    const name = email.split('@')[0];
+    signupWithGoogleAccount(email, name);
 }
 </script>
 
