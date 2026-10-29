@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Data Manager Dashboard - AgenticLiner{% endblock %}
+{% block title %}Data Manager - Campus Inventory & Catalog{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4">
@@ -10,117 +10,616 @@
             <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-1">
-                        <h2 class="fw-bold mb-0">📁 Campus Data Operations Manager</h2>
-                        <span class="badge bg-warning text-dark">Data Import & Master Records</span>
+                        <h2 class="fw-bold mb-0">📁 Campus Inventory & Catalog Manager</h2>
+                        <span class="badge bg-warning text-dark">Data Operations Hub</span>
                     </div>
-                    <p class="text-muted mb-0">Manage university venue definitions, equipment inventory quotas, guest speaker profiles, and historical event datasets via atomic CSV operations.</p>
+                    <p class="text-muted mb-0">
+                        Add and manage campus venues, equipment, and guest speakers with photos and details. The system automatically syncs records to the database and maintains auto-generated CSV datasets.
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/organiser/planner" class="btn btn-outline-primary fw-semibold">
+                        <i class="bi bi-cart3 me-1"></i> View in Event Planner
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Data Overview Metrics (Real DB Counts) -->
+    <!-- Alert Notifications -->
+    {% if request.query_params.get('added') %}
+    <div class="alert alert-success border border-success-subtle shadow-sm alert-dismissible fade show p-3 mb-4 rounded-3" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+            <div>
+                <strong>Item Successfully Added!</strong>
+                <span class="text-muted small">New record with photo was saved to database and synced to CSV catalog.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if request.query_params.get('deleted') %}
+    <div class="alert alert-info border border-info-subtle shadow-sm alert-dismissible fade show p-3 mb-4 rounded-3" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-trash3-fill text-secondary fs-4"></i>
+            <div>
+                <strong>Item Removed:</strong>
+                <span class="text-muted small">The record was deleted from the catalog.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Overview Metrics Cards (Real DB Counts) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
                 <span class="text-muted small">Campus Venues Loaded</span>
                 <h3 class="fw-bold text-dark mb-0">{{ venues_count or 0 }}</h3>
-                {% if venues_count == 0 %}
-                <span class="text-danger small fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>No venues yet</span>
-                {% else %}
-                <span class="text-muted small">Active campus halls</span>
-                {% endif %}
+                <span class="text-muted small">Halls & Auditoriums</span>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-success">
-                <span class="text-muted small">Equipment Items</span>
+                <span class="text-muted small">Equipment & Logistics Items</span>
                 <h3 class="fw-bold text-dark mb-0">{{ equipment_count or 0 }}</h3>
-                {% if equipment_count == 0 %}
-                <span class="text-danger small fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>No equipment yet</span>
-                {% else %}
-                <span class="text-muted small">Inventory items</span>
-                {% endif %}
+                <span class="text-muted small">Tracked inventory stock</span>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-info">
-                <span class="text-muted small">Faculty / Speakers</span>
+                <span class="text-muted small">Faculty / Speakers Listed</span>
                 <h3 class="fw-bold text-dark mb-0">{{ speakers_count or 0 }}</h3>
-                {% if speakers_count == 0 %}
-                <span class="text-secondary small">No speakers listed</span>
-                {% else %}
-                <span class="text-muted small">Available mentors</span>
-                {% endif %}
+                <span class="text-muted small">Registered mentors</span>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-secondary">
                 <span class="text-muted small">Historical Event Records</span>
                 <h3 class="fw-bold text-dark mb-0">{{ past_events_count or 0 }}</h3>
-                {% if past_events_count == 0 %}
-                <span class="text-secondary small">No past event records</span>
-                {% else %}
-                <span class="text-muted small">ML training records</span>
-                {% endif %}
+                <span class="text-muted small">Past event records</span>
             </div>
         </div>
     </div>
 
-    <!-- Zero State Banner when system is completely empty -->
-    {% if venues_count == 0 and equipment_count == 0 and speakers_count == 0 %}
-    <div class="alert alert-warning border border-warning-subtle p-3 mb-4 rounded-3">
-        <div class="d-flex align-items-center gap-2 mb-1">
-            <i class="bi bi-inbox-fill text-warning-emphasis fs-4"></i>
-            <strong class="text-dark">Clean Starting State Active</strong>
+    <!-- Zero State Banner when inventory is completely fresh -->
+    {% if venues_count == 0 and equipment_count == 0 %}
+    <div class="card card-custom p-4 bg-white mb-4 border-dashed text-center">
+        <div class="py-2">
+            <i class="bi bi-shop text-primary fs-1 d-block mb-2"></i>
+            <h5 class="fw-bold mb-1">Clean Starting State Active</h5>
+            <p class="text-muted small mx-auto mb-0" style="max-width: 500px;">
+                No campus venues or inventory items have been loaded yet. Click <b>"+ Add Venue"</b> or <b>"+ Add Equipment"</b> below to add campus assets with photos and details.
+            </p>
         </div>
-        <p class="small text-muted mb-0">
-            No venues, inventory equipment, or speakers are currently loaded in the database. In <strong>Phase 4</strong>, you will be able to upload CSV datasets (venues, equipment, speakers, participants, past_events) with atomic validation and instant schema checking.
-        </p>
     </div>
     {% endif %}
 
-    <div class="row g-4">
-        <div class="col-12">
-            <div class="card card-custom p-4 bg-white">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-arrow-up text-primary me-2"></i>Atomic CSV Datasets (Phase 4 Ready)</h5>
-                    <span class="badge bg-light text-dark border">Data Management Center</span>
+    <!-- SELLER-STYLE CATEGORY TABS -->
+    <div class="card card-custom bg-white border mb-4">
+        <div class="card-header bg-white border-bottom pt-3 px-4">
+            <ul class="nav nav-tabs card-header-tabs" id="catalogTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold text-primary" id="venues-tab" data-bs-toggle="tab" data-bs-target="#tab-venues" type="button" role="tab">
+                        <i class="bi bi-building me-1"></i> Venues & Halls ({{ venues|length }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-dark" id="equipment-tab" data-bs-toggle="tab" data-bs-target="#tab-equipment" type="button" role="tab">
+                        <i class="bi bi-box-seam me-1"></i> Equipment & Logistics ({{ equipment|length }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-dark" id="speakers-tab" data-bs-toggle="tab" data-bs-target="#tab-speakers" type="button" role="tab">
+                        <i class="bi bi-person-video3 me-1"></i> Speakers & Mentors ({{ speakers|length }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-dark" id="export-tab" data-bs-toggle="tab" data-bs-target="#tab-export" type="button" role="tab">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Auto-Generated CSV Datasets
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="tab-content" id="catalogTabContent">
+
+                <!-- TAB 1: VENUES & HALLS -->
+                <div class="tab-pane fade show active" id="tab-venues" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-1">Campus Venues & Auditoriums</h5>
+                            <p class="text-muted small mb-0">List physical halls, capacity limits, audio-visual capabilities, and Dean sign-off requirements.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="/api/inventory/export/venues.csv" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download me-1"></i> Export Venues CSV
+                            </a>
+                            <button type="button" class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#addVenueModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add New Venue
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Venues Product Grid -->
+                    <div class="row g-4">
+                        {% for v in venues %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm border rounded-3 overflow-hidden">
+                                <div style="height: 180px; background-color: #e2e8f0; overflow: hidden; position: relative;">
+                                    <img src="{{ v.image_url or 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=600&q=80' }}"
+                                         alt="{{ v.name }}"
+                                         style="width: 100%; height: 100%; object-fit: cover;">
+                                    <span class="badge bg-dark bg-opacity-75 position-absolute top-0 start-0 m-2">
+                                        <i class="bi bi-geo-alt me-1"></i>{{ v.location or 'Campus' }}
+                                    </span>
+                                    {% if v.requires_special_approval %}
+                                    <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2">
+                                        Dean Sign-Off
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-truncate">{{ v.name }}</h6>
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                <i class="bi bi-people-fill me-1"></i>{{ v.capacity }} Seats
+                                            </span>
+                                            {% if v.has_projector %}<span class="badge bg-light text-secondary border">Projector</span>{% endif %}
+                                            {% if v.has_audio %}<span class="badge bg-light text-secondary border">PA Audio</span>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-2">
+                                        <span class="small text-muted font-monospace">{{ v.id }}</span>
+                                        <form action="/api/inventory/venues/{{ v.id }}/delete" method="POST" onsubmit="return confirm('Delete venue {{ v.name }}?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                                                <i class="bi bi-trash3 me-1"></i>Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-center py-5">
+                            <i class="bi bi-building fs-1 text-secondary d-block mb-2"></i>
+                            <h6 class="fw-bold mb-1">No Venues Listed Yet</h6>
+                            <p class="text-muted small mx-auto mb-3" style="max-width: 420px;">
+                                Add your campus auditoriums, seminar halls, and computer labs so student clubs can requisition and book them.
+                            </p>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVenueModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add Your First Venue
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <p class="text-muted small mb-3">Download pre-formatted campus templates, validate required schema columns, and upload master datasets atomically.</p>
-                
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <div class="p-3 border rounded bg-light text-center">
-                            <i class="bi bi-building fs-3 text-primary d-block mb-1"></i>
-                            <div class="fw-bold small">Venues Dataset</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">(id, name, capacity, price_per_hour)</div>
+
+                <!-- TAB 2: EQUIPMENT & INVENTORY -->
+                <div class="tab-pane fade" id="tab-equipment" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-1">Equipment & Logistics Inventory</h5>
+                            <p class="text-muted small mb-0">Manage stock quotas for mics, sound systems, lights, catering, extension cords, and campus transport.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="/api/inventory/export/equipment.csv" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download me-1"></i> Export Equipment CSV
+                            </a>
+                            <button type="button" class="btn btn-success fw-semibold" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add New Item
+                            </button>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="p-3 border rounded bg-light text-center">
-                            <i class="bi bi-tools fs-3 text-success d-block mb-1"></i>
-                            <div class="fw-bold small">Equipment Dataset</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">(item, stock, unit_price)</div>
+
+                    <!-- Equipment Product Grid -->
+                    <div class="row g-4">
+                        {% for item in equipment %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm border rounded-3 overflow-hidden">
+                                <div style="height: 160px; background-color: #e2e8f0; overflow: hidden; position: relative;">
+                                    <img src="{{ item.image_url or 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=600&q=80' }}"
+                                         alt="{{ item.name }}"
+                                         style="width: 100%; height: 100%; object-fit: cover;">
+                                    <span class="badge bg-secondary text-uppercase position-absolute top-0 start-0 m-2" style="font-size: 0.65rem;">
+                                        {{ item.category }}
+                                    </span>
+                                    {% if item.requires_approval %}
+                                    <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2">
+                                        Dean Approval
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-truncate">{{ item.name }}</h6>
+                                        <p class="text-muted small mb-2 text-truncate">{{ item.description or 'Campus standard equipment' }}</p>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                Stock: {{ item.stock }} {{ item.unit }}s
+                                            </span>
+                                            <span class="badge bg-light text-muted border">
+                                                Allocated: {{ item.allocated_stock or 0 }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-2">
+                                        <span class="small text-muted font-monospace">{{ item.id }}</span>
+                                        <form action="/api/inventory/equipment/{{ item.id }}/delete" method="POST" onsubmit="return confirm('Delete item {{ item.name }}?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                                                <i class="bi bi-trash3 me-1"></i>Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-center py-5">
+                            <i class="bi bi-box-seam fs-1 text-secondary d-block mb-2"></i>
+                            <h6 class="fw-bold mb-1">No Equipment in Inventory Yet</h6>
+                            <p class="text-muted small mx-auto mb-3" style="max-width: 420px;">
+                                Add your campus logistics items (cordless mics, sound systems, lights, refreshments, power cords) with photos and available stock quantities.
+                            </p>
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add Your First Item
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- TAB 3: SPEAKERS & MENTORS -->
+                <div class="tab-pane fade" id="tab-speakers" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-1">Faculty Mentors & Guest Speakers</h5>
+                            <p class="text-muted small mb-0">Maintain speaker profiles, domains of expertise, email addresses, and availability slots.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="/api/inventory/export/speakers.csv" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download me-1"></i> Export Speakers CSV
+                            </a>
+                            <button type="button" class="btn btn-info text-white fw-semibold" data-bs-toggle="modal" data-bs-target="#addSpeakerModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add New Speaker
+                            </button>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="p-3 border rounded bg-light text-center">
-                            <i class="bi bi-mic fs-3 text-info d-block mb-1"></i>
-                            <div class="fw-bold small">Speakers Dataset</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">(id, name, topics, email, phone)</div>
+
+                    <!-- Speakers Grid -->
+                    <div class="row g-4">
+                        {% for spk in speakers %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm border rounded-3 p-3 d-flex flex-column justify-content-between">
+                                <div class="d-flex align-items-center gap-3 mb-3">
+                                    <img src="{{ spk.image_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' }}"
+                                         alt="{{ spk.name }}"
+                                         class="rounded-circle border"
+                                         style="width: 56px; height: 56px; object-fit: cover;">
+                                    <div class="overflow-hidden">
+                                        <h6 class="fw-bold mb-0 text-truncate">{{ spk.name }}</h6>
+                                        <span class="badge bg-light text-secondary border small">{{ spk.department or 'Campus Faculty' }}</span>
+                                    </div>
+                                </div>
+                                <div class="small mb-3">
+                                    <div class="text-muted mb-1"><i class="bi bi-mortarboard me-1"></i>Topics: <span class="text-dark fw-semibold">{{ spk.topics }}</span></div>
+                                    <div class="text-muted mb-1"><i class="bi bi-envelope me-1"></i>{{ spk.email }}</div>
+                                    {% if spk.phone %}<div class="text-muted"><i class="bi bi-telephone me-1"></i>{{ spk.phone }}</div>{% endif %}
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                    <span class="small text-muted font-monospace">{{ spk.id }}</span>
+                                    <form action="/api/inventory/speakers/{{ spk.id }}/delete" method="POST" onsubmit="return confirm('Delete speaker {{ spk.name }}?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                                            <i class="bi bi-trash3 me-1"></i>Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
+                        {% else %}
+                        <div class="col-12 text-center py-5">
+                            <i class="bi bi-person-video3 fs-1 text-secondary d-block mb-2"></i>
+                            <h6 class="fw-bold mb-1">No Speakers Listed Yet</h6>
+                            <p class="text-muted small mx-auto mb-3" style="max-width: 420px;">
+                                Add faculty mentors and guest speakers to assign them to timetable sessions and workshops.
+                            </p>
+                            <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#addSpeakerModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add Your First Speaker
+                            </button>
+                        </div>
+                        {% endfor %}
                     </div>
-                    <div class="col-md-3">
-                        <div class="p-3 border rounded bg-light text-center">
-                            <i class="bi bi-clock-history fs-3 text-secondary d-block mb-1"></i>
-                            <div class="fw-bold small">Past Events Dataset</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">(event_type, organiser, headcount, feedback)</div>
+                </div>
+
+                <!-- TAB 4: AUTO-GENERATED CSV DATASETS -->
+                <div class="tab-pane fade" id="tab-export" role="tabpanel">
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-1">Auto-Generated Master CSV Datasets</h5>
+                        <p class="text-muted small mb-0">
+                            Whenever you add or delete items in the tabs above, the application automatically keeps the underlying CSV datasets up-to-date. You can download real-time CSV exports at any time.
+                        </p>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card p-3 border h-100 bg-light text-center">
+                                <i class="bi bi-building fs-2 text-primary d-block mb-2"></i>
+                                <h6 class="fw-bold mb-1">venues.csv</h6>
+                                <p class="small text-muted mb-3">{{ venues_count or 0 }} records</p>
+                                <a href="/api/inventory/export/venues.csv" class="btn btn-sm btn-primary mt-auto">
+                                    <i class="bi bi-download me-1"></i> Download CSV
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card p-3 border h-100 bg-light text-center">
+                                <i class="bi bi-box-seam fs-2 text-success d-block mb-2"></i>
+                                <h6 class="fw-bold mb-1">equipment.csv</h6>
+                                <p class="small text-muted mb-3">{{ equipment_count or 0 }} records</p>
+                                <a href="/api/inventory/export/equipment.csv" class="btn btn-sm btn-success mt-auto">
+                                    <i class="bi bi-download me-1"></i> Download CSV
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card p-3 border h-100 bg-light text-center">
+                                <i class="bi bi-person-badge fs-2 text-info d-block mb-2"></i>
+                                <h6 class="fw-bold mb-1">speakers.csv</h6>
+                                <p class="small text-muted mb-3">{{ speakers_count or 0 }} records</p>
+                                <a href="/api/inventory/export/speakers.csv" class="btn btn-sm btn-info text-white mt-auto">
+                                    <i class="bi bi-download me-1"></i> Download CSV
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card p-3 border h-100 bg-light text-center">
+                                <i class="bi bi-clock-history fs-2 text-secondary d-block mb-2"></i>
+                                <h6 class="fw-bold mb-1">past_events.csv</h6>
+                                <p class="small text-muted mb-3">{{ past_events_count or 0 }} records</p>
+                                <a href="/api/inventory/export/past_events.csv" class="btn btn-sm btn-secondary mt-auto">
+                                    <i class="bi bi-download me-1"></i> Download CSV
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
 </div>
+
+<!-- ================= MODALS FOR ADDING ITEMS ================= -->
+
+<!-- 1. ADD VENUE MODAL -->
+<div class="modal fade" id="addVenueModal" tabindex="-1" aria-labelledby="addVenueModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="addVenueModalLabel">
+                    <i class="bi bi-building-add me-2"></i>Add Campus Venue
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/api/inventory/venues" method="POST" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Venue Name</label>
+                        <input type="text" class="form-control" name="name" placeholder="e.g. Main Auditorium A (Block C)" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Seating Capacity</label>
+                            <input type="number" class="form-control" name="capacity" placeholder="e.g. 500" min="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Campus Location</label>
+                            <input type="text" class="form-control" name="location" placeholder="e.g. Block C, Ground Floor" required>
+                        </div>
+                    </div>
+
+                    <!-- Photo Upload with Preview -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Venue Photo</label>
+                        <input type="file" class="form-control" name="photo" accept="image/*" onchange="previewImage(this, 'venuePreview')">
+                        <div class="mt-2 text-center">
+                            <img id="venuePreview" src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=400&q=80"
+                                 class="rounded border shadow-sm" style="max-height: 120px; max-width: 100%; object-fit: cover;">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary d-block">Capabilities & Approvals</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="has_projector" id="venueProj" checked>
+                            <label class="form-check-label small" for="venueProj">Projector Screen</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="has_audio" id="venueAudio" checked>
+                            <label class="form-check-label small" for="venueAudio">PA Audio System</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="requires_special_approval" id="venueDean">
+                            <label class="form-check-label small text-warning-emphasis fw-semibold" for="venueDean">Requires Dean Sign-Off</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-bold">
+                        <i class="bi bi-check-lg me-1"></i> Save Venue & Sync
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 2. ADD EQUIPMENT MODAL -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold" id="addEquipmentModalLabel">
+                    <i class="bi bi-box-seam me-2"></i>Add Logistics Item (Flipkart Style)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/api/inventory/equipment" method="POST" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Item Name</label>
+                        <input type="text" class="form-control" name="name" placeholder="e.g. Wireless UHF Cordless Mic Set (Pair)" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Category</label>
+                            <select class="form-select" name="category" required>
+                                <option value="equipment" selected>Equipment / Electronics</option>
+                                <option value="food">Catering / Refreshments</option>
+                                <option value="volunteers">Student Volunteers</option>
+                                <option value="transport">Campus Transport / Shuttle</option>
+                                <option value="misc">Stage Banners & Misc</option>
+                            </select>
+                        </div>
+                        <div class="col-3">
+                            <label class="form-label small fw-semibold text-secondary">Stock Qty</label>
+                            <input type="number" class="form-control" name="stock" value="10" min="1" required>
+                        </div>
+                        <div class="col-3">
+                            <label class="form-label small fw-semibold text-secondary">Unit</label>
+                            <input type="text" class="form-control" name="unit" value="unit" placeholder="unit, pair, box">
+                        </div>
+                    </div>
+
+                    <!-- Photo Upload with Preview -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Product Photo</label>
+                        <input type="file" class="form-control" name="photo" accept="image/*" onchange="previewImage(this, 'equipPreview')">
+                        <div class="mt-2 text-center">
+                            <img id="equipPreview" src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=400&q=80"
+                                 class="rounded border shadow-sm" style="max-height: 120px; max-width: 100%; object-fit: cover;">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Description</label>
+                        <input type="text" class="form-control" name="description" placeholder="e.g. Dual wireless UHF presenter microphones">
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="requires_approval" id="equipApproval">
+                        <label class="form-check-label small fw-semibold" for="equipApproval">
+                            Requires Dean Special Sign-Off
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success fw-bold">
+                        <i class="bi bi-check-lg me-1"></i> Add Product to Inventory
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3. ADD SPEAKER MODAL -->
+<div class="modal fade" id="addSpeakerModal" tabindex="-1" aria-labelledby="addSpeakerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title fw-bold" id="addSpeakerModalLabel">
+                    <i class="bi bi-person-plus me-2"></i>Add Faculty Mentor / Speaker
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/api/inventory/speakers" method="POST" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Full Name</label>
+                        <input type="text" class="form-control" name="name" placeholder="e.g. Dr. Vartika Puri" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Department</label>
+                            <input type="text" class="form-control" name="department" value="School of AI" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Email</label>
+                            <input type="email" class="form-control" name="email" placeholder="faculty@galgotias.edu" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Topics / Specialization</label>
+                        <input type="text" class="form-control" name="topics" placeholder="e.g. Generative AI, AI Safety, Deep Learning" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Phone (Optional)</label>
+                            <input type="text" class="form-control" name="phone" placeholder="+91 9876543210">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Availability Hours</label>
+                            <input type="text" class="form-control" name="availability" value="09:00-17:00">
+                        </div>
+                    </div>
+
+                    <!-- Photo Upload with Preview -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Speaker Photo</label>
+                        <input type="file" class="form-control" name="photo" accept="image/*" onchange="previewImage(this, 'spkPreview')">
+                        <div class="mt-2 text-center">
+                            <img id="spkPreview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80"
+                                 class="rounded-circle border shadow-sm" style="width: 80px; height: 80px; object-fit: cover;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info text-white fw-bold">
+                        <i class="bi bi-check-lg me-1"></i> Save Speaker Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Live Image Preview Handler
+function previewImage(input, previewId) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(previewId).src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Retain active tab on reload if specified in query params
+document.addEventListener("DOMContentLoaded", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab) {
+        const triggerEl = document.querySelector(`#${tab}-tab`);
+        if (triggerEl) {
+            const tabObj = new bootstrap.Tab(triggerEl);
+            tabObj.show();
+        }
+    }
+});
+</script>
 {% endblock %}

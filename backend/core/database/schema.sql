@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS events (
     organizer_department TEXT DEFAULT 'School of AI',
     approval_status TEXT DEFAULT 'auto_approved', -- auto_approved, pending_dean_approval, approved
     status TEXT DEFAULT 'planned', -- planned, allocated, completed, cancelled
+    image_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -53,7 +54,8 @@ CREATE TABLE IF NOT EXISTS rooms (
     location TEXT,
     has_projector BOOLEAN DEFAULT 1,
     has_audio BOOLEAN DEFAULT 1,
-    requires_special_approval BOOLEAN DEFAULT 0 -- e.g. Main Audi requires Dean sign-off
+    requires_special_approval BOOLEAN DEFAULT 0, -- e.g. Main Audi requires Dean sign-off
+    image_url TEXT
 );
 
 -- 3. Speakers & Faculty Mentors
@@ -64,7 +66,8 @@ CREATE TABLE IF NOT EXISTS speakers (
     topics TEXT, -- comma-separated or JSON array
     email TEXT,
     phone TEXT,
-    availability_json TEXT
+    availability_json TEXT,
+    image_url TEXT
 );
 
 -- 4. Resources & Equipment Catalog (Campus Logistics Inventory)
@@ -76,7 +79,8 @@ CREATE TABLE IF NOT EXISTS resources (
     allocated_stock INTEGER NOT NULL DEFAULT 0,
     unit TEXT DEFAULT 'unit',
     requires_approval BOOLEAN DEFAULT 0,
-    description TEXT
+    description TEXT,
+    image_url TEXT
 );
 
 -- 5. Sessions / Agenda Breakdown

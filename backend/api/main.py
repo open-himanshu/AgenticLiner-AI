@@ -28,6 +28,7 @@ from backend.modules.module6_feedback.analyzer import FeedbackAnalyzer
 from backend.modules.module7_analytics.generator import EventAnalyticsEngine
 from backend.services.admin_service import reset_all_operational_data
 from backend.api.auth_routes import router as auth_router, ROLE_DASHBOARDS
+from backend.api.inventory_routes import router as inventory_router
 from backend.api.dependencies import require_auth, require_role, get_session_user
 
 app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
@@ -53,6 +54,9 @@ app.add_middleware(
 
 # Include Authentication Router
 app.include_router(auth_router)
+
+# Include Inventory & Catalog Router (Seller-style Add/Export)
+app.include_router(inventory_router)
 
 # Custom Exception Handlers for Strict RBAC & Unauthenticated Redirects
 @app.exception_handler(HTTPException)
@@ -251,6 +255,11 @@ async def data_manager_dashboard(
     speakers_count = fetch_one("SELECT count(*) as count FROM speakers")["count"]
     past_events_count = fetch_one("SELECT count(*) as count FROM historical_events")["count"]
 
+    venues = fetch_all("SELECT * FROM rooms ORDER BY name")
+    equipment = fetch_all("SELECT * FROM resources ORDER BY category, name")
+    speakers = fetch_all("SELECT * FROM speakers ORDER BY name")
+    past_events = fetch_all("SELECT * FROM historical_events")
+
     return templates.TemplateResponse(
         request=request,
         name="data_manager.html",
@@ -259,7 +268,11 @@ async def data_manager_dashboard(
             "venues_count": venues_count,
             "equipment_count": equipment_count,
             "speakers_count": speakers_count,
-            "past_events_count": past_events_count
+            "past_events_count": past_events_count,
+            "venues": venues,
+            "equipment": equipment,
+            "speakers": speakers,
+            "past_events": past_events
         }
     )
 

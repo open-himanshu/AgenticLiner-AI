@@ -128,6 +128,11 @@
                     <div class="col-md-6 catalog-card" data-category="{{ item.category }}">
                         <div class="border rounded-3 p-3 h-100 d-flex flex-column justify-content-between bg-light">
                             <div>
+                                {% if item.image_url %}
+                                <div class="mb-2 text-center bg-white rounded p-1 border overflow-hidden" style="height: 100px;">
+                                    <img src="{{ item.image_url }}" alt="{{ item.name }}" class="w-100 h-100 object-fit-cover rounded">
+                                </div>
+                                {% endif %}
                                 <div class="d-flex justify-content-between align-items-start mb-1">
                                     <span class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">{{ item.category }}</span>
                                     {% if item.requires_approval %}
@@ -155,7 +160,7 @@
                     <div class="col-12 text-center py-5 text-muted">
                         <i class="bi bi-box-seam fs-1 text-secondary d-block mb-2"></i>
                         <h6 class="fw-bold mb-1">No equipment in inventory yet.</h6>
-                        <p class="small text-muted mb-0">Go to <a href="/data-manager" class="text-primary fw-semibold">Data Manager &gt; Upload</a> to import campus equipment via CSV.</p>
+                        <p class="small text-muted mb-0">Go to <a href="/data-manager" class="text-primary fw-semibold">Data Manager</a> to add equipment or import items.</p>
                     </div>
                     {% endfor %}
                 </div>

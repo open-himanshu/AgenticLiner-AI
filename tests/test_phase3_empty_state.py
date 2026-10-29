@@ -74,8 +74,8 @@ async def test_data_manager_dashboard_zero_counts_and_empty_state():
 
         # Verify zero state banner
         assert "Clean Starting State Active" in html
-        assert "No venues yet" in html
-        assert "No equipment yet" in html
+        assert "No Venues Listed Yet" in html
+        assert "No Equipment in Inventory Yet" in html
 
 @pytest.mark.anyio
 async def test_admin_reset_access_control_and_execution():

@@ -25,6 +25,8 @@ htmlcov/
 
 # Logs & OS Files
 *.log
+backend/data/generated_docs/
+frontend/static/uploads/
 .DS_Store
 Thumbs.db
 .idea/
