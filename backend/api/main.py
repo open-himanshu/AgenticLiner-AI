@@ -505,6 +505,7 @@ async def download_executive_report_pdf(event_id: str):
     )
 
 @app.post("/api/autopilot/run")
+@app.post("/agent/run")
 async def run_autopilot_api(req: AutopilotRequest):
     """Runs autonomous event planning with Kavach safety checks and live timeline logging."""
     res = autopilot_agent.run_autopilot(
