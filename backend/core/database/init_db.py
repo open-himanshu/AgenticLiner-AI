@@ -183,4 +183,7 @@ def seed_campus_data(db_conn: sqlite3.Connection = None, force_reseed: bool = Fa
 
 if __name__ == "__main__":
     init_database()
-    seed_campus_data(force_reseed=True)
+    if "--seed-demo" in sys.argv:
+        seed_campus_data(force_reseed=True)
+    else:
+        print("Database schema initialized in clean zero-state (use --seed-demo for demo seed).")

@@ -101,6 +101,7 @@ async def login_submit(
                     "error": "Email and password are required.",
                     "next": "",
                     "google_client_id": google_client_id,
+                    "firebase_config": get_firebase_config(),
                     "smtp_configured": is_smtp_configured()
                 }
             )
@@ -117,6 +118,7 @@ async def login_submit(
                     "error": error_msg or "Invalid email or password. Please try again.",
                     "next": "",
                     "google_client_id": google_client_id,
+                    "firebase_config": get_firebase_config(),
                     "smtp_configured": is_smtp_configured()
                 }
             )

@@ -24,34 +24,34 @@
         </div>
     </div>
 
-    <!-- Top Campus KPI Cards -->
+    <!-- Top Campus KPI Cards (Real DB Counts) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
                 <span class="text-muted small">Registered Attendees</span>
-                <h3 class="fw-bold text-dark mb-0">150</h3>
-                <span class="text-success small"><i class="bi bi-check-circle me-1"></i>100% hall quota filled</span>
+                <h3 class="fw-bold text-dark mb-0">{{ total_reg or 0 }}</h3>
+                <span class="text-muted small">Confirmed across sessions</span>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-success">
-                <span class="text-muted small">Verified Turn-Up Rate</span>
-                <h3 class="fw-bold text-dark mb-0">94.6%</h3>
-                <span class="text-muted small">142 verified QR check-ins</span>
+                <span class="text-muted small">Verified Turnout Rate</span>
+                <h3 class="fw-bold text-dark mb-0">{{ turnout_rate or 0.0 }}%</h3>
+                <span class="text-muted small">{{ total_checked or 0 }} verified check-ins</span>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-warning">
                 <span class="text-muted small">Feedback Sentiment</span>
-                <h3 class="fw-bold text-dark mb-0">88% Pos</h3>
-                <span class="text-muted small">Average Rating: 4.6 / 5.0</span>
+                <h3 class="fw-bold text-dark mb-0">{% if fb_count > 0 %}{{ avg_rating }} / 5.0{% else %}No Reviews{% endif %}</h3>
+                <span class="text-muted small">{{ fb_count or 0 }} student submissions</span>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-info">
-                <span class="text-muted small">Logistics Allocated</span>
-                <h3 class="fw-bold text-dark mb-0">100% Feasible</h3>
-                <span class="text-success small">Zero double-bookings</span>
+                <span class="text-muted small">Campus Events Total</span>
+                <h3 class="fw-bold text-dark mb-0">{{ events|length }}</h3>
+                <span class="text-success small">Real-time DB query</span>
             </div>
         </div>
     </div>

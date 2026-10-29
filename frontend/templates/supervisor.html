@@ -15,19 +15,37 @@
                     </div>
                     <p class="text-muted mb-0">Oversee campus-wide events, review pending booking requisitions, manage master inventory quotas, and inspect audit logs.</p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 align-items-center flex-wrap">
                     <a href="/analytics" class="btn btn-outline-primary fw-semibold">
                         <i class="bi bi-graph-up me-1"></i> Executive Analytics
                     </a>
                     <a href="/supervisor/audit-log" class="btn btn-outline-dark fw-semibold">
                         <i class="bi bi-journal-text me-1"></i> Audit Trail
                     </a>
+                    <!-- Phase 3: Admin Reset Action Button -->
+                    <button type="button" class="btn btn-outline-danger fw-semibold" data-bs-toggle="modal" data-bs-target="#resetDataModal">
+                        <i class="bi bi-trash3 me-1"></i> Reset All Data
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Metrics Cards -->
+    <!-- Alert Banner for Reset Success -->
+    {% if request.query_params.get('reset_success') %}
+    <div class="alert alert-warning border border-warning-subtle shadow-sm alert-dismissible fade show p-3 mb-4 rounded-3" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
+            <div>
+                <strong class="text-dark">Admin Zero-State Reset Executed:</strong>
+                <span class="text-muted small">All operational records (events, rooms, equipment, bookings, attendees) have been purged. The system is in clean starting state.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Metrics Cards (Real DB Counts) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-warning">
@@ -47,19 +65,92 @@
             <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
                 <span class="text-muted small">Campus Venues Available</span>
                 <h3 class="fw-bold text-dark mb-0">{{ rooms_count or 0 }}</h3>
+                {% if rooms_count == 0 %}
+                <span class="text-danger small fw-semibold"><i class="bi bi-info-circle me-1"></i>Empty: Upload in Data Manager</span>
+                {% else %}
                 <span class="text-muted small">Total campus halls</span>
+                {% endif %}
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-info">
                 <span class="text-muted small">Inventory Resource Catalog</span>
                 <h3 class="fw-bold text-dark mb-0">{{ resources_count or 0 }}</h3>
+                {% if resources_count == 0 %}
+                <span class="text-danger small fw-semibold"><i class="bi bi-info-circle me-1"></i>Empty: Upload in Data Manager</span>
+                {% else %}
                 <span class="text-muted small">Tracked equipment items</span>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Supervisor Section Placeholders -->
+    <!-- Empty State Guide if Database is completely empty -->
+    {% if rooms_count == 0 and resources_count == 0 and (active_count or 0) == 0 %}
+    <div class="alert alert-info border border-info-subtle p-3 mb-4 rounded-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+            <div>
+                <strong>Clean Zero-State Active:</strong>
+                <span class="text-muted small">No campus venues or inventory items exist in database. Master datasets can be imported atomically.</span>
+            </div>
+        </div>
+        <a href="/data-manager" class="btn btn-sm btn-primary fw-semibold">
+            <i class="bi bi-upload me-1"></i> Go to Data Manager &gt; Upload CSV
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Audit Log View (When toggled via /supervisor/audit-log) -->
+    {% if show_audit %}
+    <div class="card card-custom p-4 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0"><i class="bi bi-journal-text text-dark me-2"></i>Campus Immutable Audit Trail</h5>
+            <a href="/supervisor" class="btn btn-sm btn-outline-secondary">Back to Dashboard</a>
+        </div>
+        {% if audit_logs %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle small mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Actor</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in audit_logs %}
+                    <tr>
+                        <td class="text-muted font-monospace">{{ log.timestamp }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ log.actor }}</span></td>
+                        <td><strong class="text-primary">{{ log.action }}</strong></td>
+                        <td class="text-secondary small text-truncate" style="max-width: 260px;">{{ log.details_json or '-' }}</td>
+                        <td>
+                            {% if log.result == 'SUCCESS' %}
+                            <span class="badge bg-success-subtle text-success border border-success">SUCCESS</span>
+                            {% elif log.result == 'BLOCKED' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger">BLOCKED</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border">{{ log.result or '-' }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-journal-check fs-1 text-secondary d-block mb-2"></i>
+            <p class="mb-0">No audit trail entries recorded yet.</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Supervisor Section -->
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card card-custom p-4 bg-white mb-4">
@@ -94,8 +185,9 @@
                 </div>
                 {% else %}
                 <div class="text-center py-5 text-muted">
-                    <i class="bi bi-check-circle fs-1 text-success d-block mb-2"></i>
-                    <p class="mb-0">No pending approval requests at this moment.</p>
+                    <i class="bi bi-inbox fs-1 text-secondary d-block mb-2"></i>
+                    <p class="mb-1 fw-semibold">No pending approval requests.</p>
+                    <p class="small text-muted mb-0">When student clubs submit event plans, Dean approval requisitions will appear here.</p>
                 </div>
                 {% endif %}
             </div>
@@ -118,11 +210,52 @@
                         <span class="badge bg-warning text-dark">REQUIRED</span>
                     </li>
                     <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                        <span>Shuttle Transport Fleet Limit</span>
-                        <span class="badge bg-info text-dark">MAX 4 BUSES</span>
+                        <span>Outbox Notification Hold</span>
+                        <span class="badge bg-success">ACTIVE</span>
                     </li>
                 </ul>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- PHASE 3: ADMIN RESET CONFIRMATION MODAL -->
+<div class="modal fade" id="resetDataModal" tabindex="-1" aria-labelledby="resetDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold" id="resetDataModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Master Data Reset
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/admin/reset-data" method="POST">
+                <div class="modal-body p-4">
+                    <p class="text-danger fw-bold mb-2">Warning: Irreversible System Purge Action</p>
+                    <p class="small text-muted mb-3">
+                        This action will permanently purge all events, venue allocations, equipment inventory, registrations, attendance records, and audit logs. The system will return to an initial <strong>clean zero-state</strong>.
+                    </p>
+                    <div class="bg-light p-3 rounded border mb-3 small">
+                        <ul class="mb-0 ps-3 text-secondary">
+                            <li>All operational tables will be wiped (events, rooms, resources, bookings, etc.).</li>
+                            <li>The 4 core role accounts (Supervisor, Organiser, Data Manager, Student) will remain available.</li>
+                            <li>An immutable audit entry will be recorded.</li>
+                        </ul>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="confirmResetCheck" required onchange="document.getElementById('btnConfirmReset').disabled = !this.checked">
+                        <label class="form-check-label small fw-semibold text-dark" for="confirmResetCheck">
+                            I confirm that I want to wipe all operational data and reset the app to zero.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold" id="btnConfirmReset" disabled>
+                        <i class="bi bi-trash3-fill me-1"></i> Yes, Reset All Data
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

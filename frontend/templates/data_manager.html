@@ -19,37 +19,66 @@
         </div>
     </div>
 
-    <!-- Data Overview Metrics -->
+    <!-- Data Overview Metrics (Real DB Counts) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
                 <span class="text-muted small">Campus Venues Loaded</span>
                 <h3 class="fw-bold text-dark mb-0">{{ venues_count or 0 }}</h3>
-                <span class="text-muted small">Active rooms</span>
+                {% if venues_count == 0 %}
+                <span class="text-danger small fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>No venues yet</span>
+                {% else %}
+                <span class="text-muted small">Active campus halls</span>
+                {% endif %}
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-success">
                 <span class="text-muted small">Equipment Items</span>
                 <h3 class="fw-bold text-dark mb-0">{{ equipment_count or 0 }}</h3>
-                <span class="text-muted small">Inventory units</span>
+                {% if equipment_count == 0 %}
+                <span class="text-danger small fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>No equipment yet</span>
+                {% else %}
+                <span class="text-muted small">Inventory items</span>
+                {% endif %}
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-info">
                 <span class="text-muted small">Faculty / Speakers</span>
                 <h3 class="fw-bold text-dark mb-0">{{ speakers_count or 0 }}</h3>
+                {% if speakers_count == 0 %}
+                <span class="text-secondary small">No speakers listed</span>
+                {% else %}
                 <span class="text-muted small">Available mentors</span>
+                {% endif %}
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-3 bg-white border-start border-4 border-secondary">
                 <span class="text-muted small">Historical Event Records</span>
                 <h3 class="fw-bold text-dark mb-0">{{ past_events_count or 0 }}</h3>
+                {% if past_events_count == 0 %}
+                <span class="text-secondary small">No past event records</span>
+                {% else %}
                 <span class="text-muted small">ML training records</span>
+                {% endif %}
             </div>
         </div>
     </div>
+
+    <!-- Zero State Banner when system is completely empty -->
+    {% if venues_count == 0 and equipment_count == 0 and speakers_count == 0 %}
+    <div class="alert alert-warning border border-warning-subtle p-3 mb-4 rounded-3">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-inbox-fill text-warning-emphasis fs-4"></i>
+            <strong class="text-dark">Clean Starting State Active</strong>
+        </div>
+        <p class="small text-muted mb-0">
+            No venues, inventory equipment, or speakers are currently loaded in the database. In <strong>Phase 4</strong>, you will be able to upload CSV datasets (venues, equipment, speakers, participants, past_events) with atomic validation and instant schema checking.
+        </p>
+    </div>
+    {% endif %}
 
     <div class="row g-4">
         <div class="col-12">
@@ -58,11 +87,37 @@
                     <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-arrow-up text-primary me-2"></i>Atomic CSV Datasets (Phase 4 Ready)</h5>
                     <span class="badge bg-light text-dark border">Data Management Center</span>
                 </div>
-                <p class="text-muted small">Download pre-formatted campus templates, validate required schema columns, and upload master datasets atomically.</p>
+                <p class="text-muted small mb-3">Download pre-formatted campus templates, validate required schema columns, and upload master datasets atomically.</p>
                 
-                <div class="alert alert-info d-flex align-items-center py-2" role="alert">
-                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
-                    <div class="small">Data Manager CSV Upload & Validation pipeline is actively configured for Phase 4.</div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light text-center">
+                            <i class="bi bi-building fs-3 text-primary d-block mb-1"></i>
+                            <div class="fw-bold small">Venues Dataset</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">(id, name, capacity, price_per_hour)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light text-center">
+                            <i class="bi bi-tools fs-3 text-success d-block mb-1"></i>
+                            <div class="fw-bold small">Equipment Dataset</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">(item, stock, unit_price)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light text-center">
+                            <i class="bi bi-mic fs-3 text-info d-block mb-1"></i>
+                            <div class="fw-bold small">Speakers Dataset</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">(id, name, topics, email, phone)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light text-center">
+                            <i class="bi bi-clock-history fs-3 text-secondary d-block mb-1"></i>
+                            <div class="fw-bold small">Past Events Dataset</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">(event_type, organiser, headcount, feedback)</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

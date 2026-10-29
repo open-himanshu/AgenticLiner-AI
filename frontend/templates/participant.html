@@ -29,6 +29,8 @@
                     <select class="form-select" id="studentSelect">
                         {% for s in students %}
                         <option value="{{ s.id }}">{{ s.name }} ({{ s.department }})</option>
+                        {% else %}
+                        <option value="" disabled selected>No participant profiles loaded yet (Upload via Data Manager)</option>
                         {% endfor %}
                     </select>
                 </div>

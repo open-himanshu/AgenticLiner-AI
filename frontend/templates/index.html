@@ -35,17 +35,18 @@
                 <form id="briefForm">
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Event Description / Natural Language Brief</label>
-                        <textarea class="form-control" id="briefText" rows="3" placeholder="e.g. 2-day AI Hackathon for 180 students with coding workshops, buffet lunch and cordless mics...">2-day Campus AI Hackathon for 180 students with coding workshops, lunch packs, extension spike boards and stage mics.</textarea>
+                        <textarea class="form-control" id="briefText" rows="3" placeholder="e.g. 2-day Campus AI Hackathon for 180 students with coding workshops, lunch packs, extension spike boards and stage mics..."></textarea>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-semibold">Expected Students</label>
-                            <input type="number" class="form-control" id="headcount" value="180">
+                            <input type="number" class="form-control" id="headcount" placeholder="e.g. 150">
                         </div>
                         <div class="col-6">
                             <label class="form-label small fw-semibold">Event Category</label>
                             <select class="form-select" id="eventType">
-                                <option value="hackathon" selected>Hackathon / Coding</option>
+                                <option value="" disabled selected>Select category...</option>
+                                <option value="hackathon">Hackathon / Coding</option>
                                 <option value="cultural">Dance / Cultural</option>
                                 <option value="workshop">Technical Workshop</option>
                                 <option value="seminar">Seminar / Conference</option>
@@ -54,7 +55,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Host Department</label>
-                        <input type="text" class="form-control" id="organizerDept" value="School of Artificial Intelligence">
+                        <input type="text" class="form-control" id="organizerDept" placeholder="e.g. School of AI / CSE Club">
                     </div>
                     <div class="d-grid gap-2 mb-2">
                         <button type="button" class="btn btn-outline-primary fw-semibold" id="btnParseBrief">
@@ -149,6 +150,12 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center py-5 text-muted">
+                        <i class="bi bi-box-seam fs-1 text-secondary d-block mb-2"></i>
+                        <h6 class="fw-bold mb-1">No equipment in inventory yet.</h6>
+                        <p class="small text-muted mb-0">Go to <a href="/data-manager" class="text-primary fw-semibold">Data Manager &gt; Upload</a> to import campus equipment via CSV.</p>
                     </div>
                     {% endfor %}
                 </div>

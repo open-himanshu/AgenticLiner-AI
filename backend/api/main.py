@@ -26,6 +26,7 @@ from backend.modules.module4_participant_xp.recommender import ParticipantExperi
 from backend.modules.module5_comm_agent.agent import CommunicationAgent
 from backend.modules.module6_feedback.analyzer import FeedbackAnalyzer
 from backend.modules.module7_analytics.generator import EventAnalyticsEngine
+from backend.services.admin_service import reset_all_operational_data
 from backend.api.auth_routes import router as auth_router, ROLE_DASHBOARDS
 from backend.api.dependencies import require_auth, require_role, get_session_user
 
@@ -175,6 +176,24 @@ async def supervisor_audit_log(
             "show_audit": True
         }
     )
+
+@app.post("/admin/reset-data")
+async def admin_reset_data(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["supervisor"]))
+):
+    """
+    Supervisor Admin Action: Purges all business data and resets database to clean zero-state.
+    Enforces confirmation and records an immutable audit log entry.
+    """
+    supervisor_email = user.get("email", "admin@galgotias.edu")
+    result = reset_all_operational_data(supervisor_email)
+
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept or request.headers.get("content-type") == "application/x-www-form-urlencoded":
+        return RedirectResponse(url="/supervisor?reset_success=1", status_code=status.HTTP_302_FOUND)
+
+    return JSONResponse(content=result)
 
 @app.get("/organiser", response_class=HTMLResponse)
 async def organiser_dashboard(
@@ -340,15 +359,25 @@ async def analytics_page(
 ):
     """Feedback Insights, Post-Event Attendance Metrics & Verifiable Credentials"""
     events = fetch_all("SELECT id, name FROM events")
+    total_reg = fetch_one("SELECT count(*) as count FROM registrations WHERE status = 'confirmed'")["count"]
+    total_checked = fetch_one("SELECT count(*) as count FROM attendance WHERE status = 'present'")["count"]
+    turnout_rate = round((total_checked / total_reg * 100), 1) if total_reg > 0 else 0.0
+    fb_row = fetch_one("SELECT count(*) as total, avg(rating) as avg_rating FROM feedback")
+    fb_count = fb_row["total"] if fb_row else 0
+    avg_rating = round(fb_row["avg_rating"], 1) if fb_row and fb_row["avg_rating"] else 0.0
+
     return templates.TemplateResponse(
         request=request,
         name="analytics.html",
-        context={"user": user, "events": events}
-    )
-    return templates.TemplateResponse(
-        request=request,
-        name="analytics.html",
-        context={"events": events}
+        context={
+            "user": user,
+            "events": events,
+            "total_reg": total_reg,
+            "total_checked": total_checked,
+            "turnout_rate": turnout_rate,
+            "fb_count": fb_count,
+            "avg_rating": avg_rating
+        }
     )
 
 @app.get("/flyer/{event_id}", response_class=HTMLResponse)

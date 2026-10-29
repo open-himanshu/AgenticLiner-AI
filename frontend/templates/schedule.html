@@ -101,6 +101,8 @@
                     <div class="d-flex flex-wrap gap-1">
                         {% for r in rooms %}
                         <span class="badge bg-light text-dark border">{{ r.name }} ({{ r.capacity }} seats)</span>
+                        {% else %}
+                        <span class="text-danger small"><i class="bi bi-info-circle me-1"></i>No venues loaded yet. Go to Data Manager &gt; Upload.</span>
                         {% endfor %}
                     </div>
                 </div>
