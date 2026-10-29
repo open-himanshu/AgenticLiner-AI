@@ -6,6 +6,10 @@
     <title>Login - AgenticLiner Event Platform</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Official Firebase Web SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="/static/js/firebase-auth.js"></script>
     <!-- Google Identity Services Web SDK -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
@@ -123,8 +127,8 @@
                     </div>
                     {% endif %}
 
-                    <!-- OPTION B: GOOGLE SIGN-IN BUTTON -->
-                    <button type="button" class="btn btn-google w-100 py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm mb-2" onclick="openGoogleModal()">
+                    <!-- REAL FIREBASE / GOOGLE SIGN-IN BUTTON -->
+                    <button type="button" class="btn btn-google w-100 py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm mb-2" onclick="handleGoogleSignInClick()">
                         <svg width="18" height="18" viewBox="0 0 18 18">
                             <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
                             <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
@@ -133,17 +137,6 @@
                         </svg>
                         <span class="fw-semibold">Sign in with Google</span>
                     </button>
-
-                    {% if google_client_id %}
-                    <div id="g_id_onload"
-                         data-client_id="{{ google_client_id }}"
-                         data-context="signin"
-                         data-ux_mode="popup"
-                         data-callback="handleGoogleCredentialResponse"
-                         data-auto_prompt="false">
-                    </div>
-                    <div class="g_id_signin d-none"></div>
-                    {% endif %}
 
                     <div class="divider">OR SIGN IN WITH CAMPUS EMAIL</div>
 
@@ -215,19 +208,19 @@
     </div>
 </div>
 
-<!-- GOOGLE ACCOUNT CHOOSER MODAL -->
+<!-- GOOGLE ACCOUNT CHOOSER / SETUP MODAL -->
 <div class="modal fade" id="googleAccountModal" tabindex="-1" aria-labelledby="googleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-body p-4">
                 <div class="text-center mb-3">
-                    <svg width="32" height="32" viewBox="0 0 18 18">
+                    <svg width="34" height="34" viewBox="0 0 18 18">
                         <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
                         <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
                         <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"/>
                         <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
                     </svg>
-                    <h5 class="fw-bold mt-2 mb-1" id="googleModalLabel">Choose an account</h5>
+                    <h5 class="fw-bold mt-2 mb-1" id="googleModalLabel">Sign in with Google</h5>
                     <p class="small text-muted mb-0">to continue to <strong>AgenticLiner</strong></p>
                 </div>
 
@@ -238,7 +231,6 @@
 
                 <!-- Account List -->
                 <div class="list-group list-group-flush mb-3">
-                    <!-- Option 1: Primary User Google Account -->
                     <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="loginWithGoogleAccount('himanshugupta00727@gmail.com', 'Himanshu Gupta', 'organiser')">
                         <div class="google-avatar bg-primary">H</div>
                         <div class="flex-grow-1 overflow-hidden">
@@ -248,7 +240,6 @@
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Organiser</span>
                     </div>
 
-                    <!-- Option 2: Campus Student Account -->
                     <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="loginWithGoogleAccount('student@galgotias.edu', 'Galgotias Student', 'participant')">
                         <div class="google-avatar bg-success">G</div>
                         <div class="flex-grow-1 overflow-hidden">
@@ -258,7 +249,6 @@
                         <span class="badge bg-success-subtle text-success border border-success-subtle small">Student</span>
                     </div>
 
-                    <!-- Option 3: Dean / Admin Account -->
                     <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="loginWithGoogleAccount('dean.office@galgotias.edu', 'Prof. Dean (Admin)', 'supervisor')">
                         <div class="google-avatar bg-danger">D</div>
                         <div class="flex-grow-1 overflow-hidden">
@@ -296,6 +286,21 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+const firebaseConfig = {{ firebase_config | tojson }};
+if (firebaseConfig && firebaseConfig.apiKey) {
+    initFirebase(firebaseConfig);
+}
+
+function handleGoogleSignInClick() {
+    if (firebaseConfig && firebaseConfig.apiKey) {
+        // Open Real Firebase Google Popup Window
+        signInWithGoogleReal('organiser', 'School of AI');
+    } else {
+        // Open Google Account Chooser Modal
+        openGoogleModal();
+    }
+}
+
 function fillCreds(email, pass) {
     document.getElementById('email').value = email;
     document.getElementById('password').value = pass;
@@ -313,20 +318,18 @@ function togglePassword(inputId, btn) {
     }
 }
 
-// Open Google Account Chooser
 function openGoogleModal() {
     const modalEl = document.getElementById('googleAccountModal');
     const modal = new bootstrap.Modal(modalEl);
     modal.show();
 }
 
-// Perform Google Login
 async function loginWithGoogleAccount(email, name, role) {
     const notice = document.getElementById('googleLoadingNotice');
     if (notice) notice.classList.remove('d-none');
 
     try {
-        const res = await fetch('/auth/google', {
+        const res = await fetch('/api/auth/firebase-login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -358,30 +361,6 @@ function submitCustomGoogleAccount() {
     }
     const name = email.split('@')[0];
     loginWithGoogleAccount(email, name, 'participant');
-}
-
-// Google Official GIS Token Callback (when client ID configured)
-async function handleGoogleCredentialResponse(response) {
-    if (!response.credential) return;
-    try {
-        const res = await fetch('/auth/google', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                credential: response.credential,
-                role: 'organiser',
-                department: 'School of AI'
-            })
-        });
-        const data = await res.json();
-        if (data.success && data.redirect_url) {
-            window.location.href = data.redirect_url;
-        } else {
-            alert('Google authentication failed: ' + (data.detail || 'Unknown error'));
-        }
-    } catch (e) {
-        alert('Error connecting to Google sign in: ' + e);
-    }
 }
 </script>
 
