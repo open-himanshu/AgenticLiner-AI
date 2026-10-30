@@ -257,3 +257,94 @@ def reset_user_password(email: str, new_password: str) -> Tuple[bool, Optional[s
         (new_hash, user["id"])
     )
     return True, None
+
+
+def ensure_user_settings_columns():
+    """Ensures profile and settings columns exist on users table in SQLite."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(users)")
+        existing_cols = {row["name"] for row in cursor.fetchall()}
+        new_cols = [
+            ("phone", "TEXT"),
+            ("bio", "TEXT"),
+            ("avatar_url", "TEXT"),
+            ("preferred_language", "TEXT DEFAULT 'en'"),
+            ("notifications_enabled", "BOOLEAN DEFAULT 1")
+        ]
+        for col_name, col_type in new_cols:
+            if col_name not in existing_cols:
+                try:
+                    cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type};")
+                except Exception:
+                    pass
+
+# Run safe migration on module import
+ensure_user_settings_columns()
+
+def update_user_profile(
+    user_id: str,
+    full_name: str,
+    department: str,
+    phone: Optional[str] = None,
+    bio: Optional[str] = None,
+    avatar_url: Optional[str] = None
+) -> Dict[str, Any]:
+    """Updates profile attributes for a user."""
+    ensure_user_settings_columns()
+    clean_name = full_name.strip()
+    if not clean_name:
+        raise ValueError("Full name cannot be empty.")
+
+    execute_query(
+        """
+        UPDATE users 
+        SET full_name = ?, department = ?, phone = ?, bio = ?, avatar_url = ?
+        WHERE id = ?
+        """,
+        (clean_name, (department or "General").strip(), phone or "", bio or "", avatar_url or "", user_id)
+    )
+    user = get_user_by_id(user_id)
+    if not user:
+        raise ValueError("User not found.")
+    return user
+
+def change_user_password(
+    user_id: str,
+    current_password: str,
+    new_password: str
+) -> Tuple[bool, Optional[str]]:
+    """Changes password after verifying existing password and strong password policy."""
+    user = get_user_by_id(user_id)
+    if not user:
+        return False, "User not found."
+
+    if not verify_password(current_password, user["password_hash"]):
+        return False, "Current password is incorrect."
+
+    is_valid, err_msg = validate_strong_password(new_password)
+    if not is_valid:
+        return False, err_msg
+
+    new_hash = hash_password(new_password)
+    execute_query(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (new_hash, user_id)
+    )
+    return True, None
+
+def update_user_preferences(
+    user_id: str,
+    preferred_language: str = "en",
+    notifications_enabled: bool = True
+) -> Dict[str, Any]:
+    """Updates user notification and language preferences."""
+    ensure_user_settings_columns()
+    valid_langs = {"en", "hi", "hinglish"}
+    lang = preferred_language.lower() if preferred_language.lower() in valid_langs else "en"
+    execute_query(
+        "UPDATE users SET preferred_language = ?, notifications_enabled = ? WHERE id = ?",
+        (lang, 1 if notifications_enabled else 0, user_id)
+    )
+    user = get_user_by_id(user_id)
+    return user or {}

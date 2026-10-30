@@ -19,11 +19,16 @@ from backend.services.auth_service import (
     create_user,
     create_user_from_google,
     get_user_by_email,
+    get_user_by_id,
     create_otp,
     verify_otp,
     reset_user_password,
-    validate_strong_password
+    validate_strong_password,
+    update_user_profile,
+    change_user_password,
+    update_user_preferences
 )
+import urllib.parse
 from backend.services.email_service import send_email_otp, is_smtp_configured
 from backend.api.dependencies import get_session_user
 
@@ -568,3 +573,102 @@ async def logout(request: Request):
     if "text/html" in accept or request.method == "GET":
         return RedirectResponse(url="/login?logged_out=1", status_code=status.HTTP_302_FOUND)
     return JSONResponse(content={"success": True, "message": "Logged out successfully."})
+
+
+# ==========================================
+# Comprehensive Settings & Profile Routes
+# ==========================================
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, tab: str = "profile", success: Optional[str] = None, error: Optional[str] = None):
+    """Renders the comprehensive user settings and profile management page."""
+    current_user = get_session_user(request)
+    if not current_user:
+        return RedirectResponse(url="/login?next=/settings", status_code=status.HTTP_302_FOUND)
+
+    user_data = get_user_by_id(current_user["id"]) or current_user
+
+    return templates.TemplateResponse(
+        request=request,
+        name="settings.html",
+        context={
+            "user": user_data,
+            "active_tab": tab,
+            "success_msg": success,
+            "error_msg": error
+        }
+    )
+
+@router.post("/settings/profile")
+async def update_profile_submit(
+    request: Request,
+    full_name: str = Form(...),
+    department: str = Form("General"),
+    phone: Optional[str] = Form(None),
+    bio: Optional[str] = Form(None)
+):
+    """Updates user personal details."""
+    current_user = get_session_user(request)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+
+    try:
+        updated = update_user_profile(
+            user_id=current_user["id"],
+            full_name=full_name,
+            department=department,
+            phone=phone,
+            bio=bio
+        )
+        if "user" in request.session:
+            request.session["user"]["full_name"] = updated["full_name"]
+            request.session["user"]["department"] = updated["department"]
+        return RedirectResponse(url="/settings?tab=profile&success=Profile+updated+successfully!", status_code=status.HTTP_302_FOUND)
+    except Exception as e:
+        return RedirectResponse(url=f"/settings?tab=profile&error={urllib.parse.quote_plus(str(e))}", status_code=status.HTTP_302_FOUND)
+
+@router.post("/settings/change-password")
+async def change_password_submit(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...)
+):
+    """Changes password for logged in user."""
+    current_user = get_session_user(request)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+
+    if new_password != confirm_password:
+        return RedirectResponse(url="/settings?tab=security&error=New+passwords+do+not+match.", status_code=status.HTTP_302_FOUND)
+
+    success, err_msg = change_user_password(
+        user_id=current_user["id"],
+        current_password=current_password,
+        new_password=new_password
+    )
+    if not success:
+        return RedirectResponse(url=f"/settings?tab=security&error={urllib.parse.quote_plus(err_msg or 'Failed to update password.')}", status_code=status.HTTP_302_FOUND)
+
+    return RedirectResponse(url="/settings?tab=security&success=Password+changed+successfully!", status_code=status.HTTP_302_FOUND)
+
+@router.post("/settings/preferences")
+async def update_preferences_submit(
+    request: Request,
+    preferred_language: str = Form("en"),
+    notifications_enabled: Optional[str] = Form(None)
+):
+    """Updates user notification and language preferences."""
+    current_user = get_session_user(request)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+
+    is_notif = True if notifications_enabled in ("on", "1", "true") else False
+    updated = update_user_preferences(
+        user_id=current_user["id"],
+        preferred_language=preferred_language,
+        notifications_enabled=is_notif
+    )
+    if "user" in request.session:
+        request.session["user"]["preferred_language"] = updated.get("preferred_language", "en")
+    return RedirectResponse(url="/settings?tab=preferences&success=Preferences+saved+successfully!", status_code=status.HTTP_302_FOUND)

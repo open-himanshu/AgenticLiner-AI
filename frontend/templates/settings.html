@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block title %}Account Settings & Profile | AgenticLiner{% endblock %}
+
+{% block extra_head %}
+<style>
+    .settings-container {
+        max-width: 1140px;
+        margin: 0 auto;
+    }
+    .settings-nav .nav-link {
+        color: #475569;
+        font-weight: 500;
+        border-radius: 8px;
+        padding: 10px 16px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.15s ease-in-out;
+    }
+    .settings-nav .nav-link:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+    .settings-nav .nav-link.active {
+        background-color: #2563eb;
+        color: #ffffff !important;
+        font-weight: 600;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+    }
+    .avatar-circle-lg {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .card-settings {
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .card-header-settings {
+        background: transparent;
+        border-bottom: 1px solid #f1f5f9;
+        padding: 20px 24px;
+    }
+    .permission-badge-check {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background-color: #dcfce7;
+        color: #15803d;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-4 px-md-5">
+    <div class="settings-container">
+        
+        <!-- Breadcrumb & Header -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-2 border-bottom">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-1 text-muted small">
+                        <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Account Settings</li>
+                    </ol>
+                </nav>
+                <h3 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-gear-fill text-primary"></i> Account & Profile Settings
+                </h3>
+                <p class="text-muted small mb-0">Manage your campus identity, security credentials, interface language, and role permissions.</p>
+            </div>
+            <div>
+                <span class="badge {% if user.role == 'supervisor' %}bg-danger{% elif user.role == 'organiser' %}bg-primary{% elif user.role == 'data_manager' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %} px-3 py-2 fs-6 text-uppercase shadow-sm">
+                    <i class="bi bi-shield-lock me-1"></i> {{ user.role.replace('_', ' ') }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Feedback Alerts -->
+        {% if success_msg %}
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill fs-5 text-success"></i>
+            <div>{{ success_msg }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        {% if error_msg %}
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+            <div>{{ error_msg }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+            <!-- Left Sidebar Navigation -->
+            <div class="col-lg-3 col-md-4">
+                <div class="card card-settings p-3 mb-3">
+                    <div class="text-center py-2 border-bottom mb-3">
+                        <div class="avatar-circle-lg mx-auto mb-2">
+                            {{ user.full_name[:2].upper() if user.full_name else 'AL' }}
+                        </div>
+                        <h6 class="fw-bold mb-0 text-dark">{{ user.full_name }}</h6>
+                        <small class="text-muted text-break">{{ user.email }}</small>
+                    </div>
+
+                    <div class="nav flex-column settings-nav" id="settings-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link {% if active_tab == 'profile' %}active{% endif %}" id="tab-profile-btn" data-bs-toggle="pill" data-bs-target="#tab-profile" type="button" role="tab">
+                            <i class="bi bi-person-circle"></i> Personal Profile
+                        </button>
+                        <button class="nav-link {% if active_tab == 'security' %}active{% endif %}" id="tab-security-btn" data-bs-toggle="pill" data-bs-target="#tab-security" type="button" role="tab">
+                            <i class="bi bi-shield-lock"></i> Security & Password
+                        </button>
+                        <button class="nav-link {% if active_tab == 'preferences' %}active{% endif %}" id="tab-preferences-btn" data-bs-toggle="pill" data-bs-target="#tab-preferences" type="button" role="tab">
+                            <i class="bi bi-sliders"></i> Preferences
+                        </button>
+                        <button class="nav-link {% if active_tab == 'access' %}active{% endif %}" id="tab-access-btn" data-bs-toggle="pill" data-bs-target="#tab-access" type="button" role="tab">
+                            <i class="bi bi-award"></i> Role & Permissions
+                        </button>
+                    </div>
+                </div>
+
+                <!-- System Invariant Status Card -->
+                <div class="card card-settings p-3 bg-light border-0">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-success p-1"><i class="bi bi-shield-check"></i></span>
+                        <span class="fw-bold text-dark small">Kavach Invariant Guard</span>
+                    </div>
+                    <p class="text-muted small mb-0" style="font-size: 0.78rem;">
+                        All session actions and account mutations are verified through atomic SQLite savepoint transactions.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Content Panels -->
+            <div class="col-lg-9 col-md-8">
+                <div class="tab-content" id="settings-tabContent">
+                    
+                    <!-- TAB 1: Personal Profile -->
+                    <div class="tab-pane fade {% if active_tab == 'profile' %}show active{% endif %}" id="tab-profile" role="tabpanel">
+                        <div class="card card-settings">
+                            <div class="card-header-settings">
+                                <h5 class="fw-bold text-dark mb-1">Personal Details</h5>
+                                <p class="text-muted small mb-0">Update your profile info and academic department.</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <form method="POST" action="/settings/profile">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Full Name <span class="text-danger">*</span></label>
+                                            <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Username</label>
+                                            <input type="text" class="form-control bg-light" value="{{ user.username }}" readonly disabled>
+                                            <div class="form-text small">Usernames are system-assigned identifiers.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Email Address</label>
+                                            <div class="input-group">
+                                                <input type="email" class="form-control bg-light" value="{{ user.email }}" readonly disabled>
+                                                <span class="input-group-text bg-success-subtle text-success small"><i class="bi bi-check-circle-fill me-1"></i> Verified</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Department / Club / Society</label>
+                                            <input type="text" name="department" class="form-control" value="{{ user.department or 'School of AI' }}" placeholder="e.g. School of AI, Technojam">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Phone / WhatsApp Number</label>
+                                            <input type="tel" name="phone" class="form-control" value="{{ user.phone or '' }}" placeholder="+91 98765 43210">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Current System Role</label>
+                                            <input type="text" class="form-control bg-light" value="{{ user.role.replace('_', ' ').title() }}" readonly disabled>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small fw-semibold">Bio / Academic Specialization</label>
+                                            <textarea name="bio" class="form-control" rows="3" placeholder="Tell us about your campus role, research interests, or society responsibilities...">{{ user.bio or '' }}</textarea>
+                                        </div>
+                                        <div class="col-12 pt-3 border-top d-flex justify-content-end">
+                                            <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                                                <i class="bi bi-check2-circle me-1"></i> Save Profile Changes
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Security & Password -->
+                    <div class="tab-pane fade {% if active_tab == 'security' %}show active{% endif %}" id="tab-security" role="tabpanel">
+                        <div class="card card-settings mb-4">
+                            <div class="card-header-settings">
+                                <h5 class="fw-bold text-dark mb-1">Change Account Password</h5>
+                                <p class="text-muted small mb-0">Enforces university policy: 8+ characters, uppercase, lowercase, number, and special character.</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <form method="POST" action="/settings/change-password">
+                                    <div class="row g-3">
+                                        <div class="col-md-12">
+                                            <label class="form-label small fw-semibold">Current Password <span class="text-danger">*</span></label>
+                                            <input type="password" name="current_password" class="form-control" placeholder="••••••••" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">New Password <span class="text-danger">*</span></label>
+                                            <input type="password" name="new_password" class="form-control" placeholder="At least 8 chars with symbols" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Confirm New Password <span class="text-danger">*</span></label>
+                                            <input type="password" name="confirm_password" class="form-control" placeholder="Repeat new password" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="p-3 bg-light rounded-3 small text-muted">
+                                                <span class="fw-semibold text-dark d-block mb-1"><i class="bi bi-info-circle me-1 text-primary"></i> Password Requirements:</span>
+                                                <ul class="mb-0 ps-3">
+                                                    <li>At least 8 characters long</li>
+                                                    <li>At least one uppercase (A-Z) and one lowercase (a-z) letter</li>
+                                                    <li>At least one number (0-9) and one special symbol (!@#$%^&* etc.)</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 pt-3 border-top d-flex justify-content-end">
+                                            <button type="submit" class="btn btn-warning px-4 fw-semibold text-dark shadow-sm">
+                                                <i class="bi bi-key-fill me-1"></i> Update Password
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Active Session Overview -->
+                        <div class="card card-settings">
+                            <div class="card-header-settings">
+                                <h6 class="fw-bold text-dark mb-1">Active Login Session</h6>
+                                <p class="text-muted small mb-0">Device and authentication telemetry for this account.</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center justify-content-between p-3 border rounded-3 bg-light">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="fs-2 text-primary"><i class="bi bi-laptop"></i></div>
+                                        <div>
+                                            <div class="fw-bold text-dark">Current Browser Session</div>
+                                            <div class="text-muted small">Signed in as <strong>{{ user.email }}</strong> &bull; Role: {{ user.role.title() }}</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success px-3 py-2 border border-success-subtle">
+                                        <i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i> Active Now
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: Preferences -->
+                    <div class="tab-pane fade {% if active_tab == 'preferences' %}show active{% endif %}" id="tab-preferences" role="tabpanel">
+                        <div class="card card-settings">
+                            <div class="card-header-settings">
+                                <h5 class="fw-bold text-dark mb-1">App & Language Preferences</h5>
+                                <p class="text-muted small mb-0">Configure your default AI natural language interaction and notifications.</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <form method="POST" action="/settings/preferences">
+                                    <div class="row g-4">
+                                        <div class="col-md-12">
+                                            <label class="form-label small fw-semibold">Default Assistant & Voice Language</label>
+                                            <select name="preferred_language" class="form-select">
+                                                <option value="en" {% if user.preferred_language == 'en' %}selected{% endif %}>English (Default - Academic Standard)</option>
+                                                <option value="hinglish" {% if user.preferred_language == 'hinglish' %}selected{% endif %}>Hinglish (e.g. "150 bacho ke liye workshop jodo, khana sound ready")</option>
+                                                <option value="hi" {% if user.preferred_language == 'hi' %}selected{% endif %}>Hindi - हिन्दी देवनागरी (e.g. "कार्यशाला और भोजन प्रबंधित करें")</option>
+                                            </select>
+                                            <div class="form-text small">Both Gemini API and offline deterministic bilingual parsers adapt to your chosen mode.</div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <h6 class="fw-bold text-dark mb-2">Notification & Alerts</h6>
+                                            <div class="form-check form-switch mb-2">
+                                                <input class="form-check-input" type="checkbox" name="notifications_enabled" id="notifSwitch" {% if user.notifications_enabled != 0 %}checked{% endif %}>
+                                                <label class="form-check-label fw-semibold text-dark small" for="notifSwitch">Campus Outbox & Schedule Change Broadcasts</label>
+                                                <div class="text-muted small">Receive automatic notifications when emergency speaker replacements or waitlist promotions occur.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 pt-3 border-top d-flex justify-content-end">
+                                            <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                                                <i class="bi bi-save me-1"></i> Save Preferences
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: Role & Permissions Matrix -->
+                    <div class="tab-pane fade {% if active_tab == 'access' %}show active{% endif %}" id="tab-access" role="tabpanel">
+                        <div class="card card-settings">
+                            <div class="card-header-settings">
+                                <h5 class="fw-bold text-dark mb-1">Role Permissions & System Capabilities</h5>
+                                <p class="text-muted small mb-0">Role-Based Access Control (RBAC) privileges assigned to <strong>{{ user.email }}</strong>.</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered align-middle mb-0">
+                                        <thead class="table-light small">
+                                            <tr>
+                                                <th style="width: 40%;">Module Capability</th>
+                                                <th>Your Role: <span class="badge bg-dark">{{ user.role.replace('_', ' ').upper() }}</span></th>
+                                                <th>Supervisory Oversight</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="small">
+                                            <tr>
+                                                <td class="fw-semibold">1-Prompt Event Auto-Genesis</td>
+                                                <td>
+                                                    {% if user.role in ['organiser', 'supervisor'] %}
+                                                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Full Access</span>
+                                                    {% else %}
+                                                    <span class="text-muted"><i class="bi bi-x-circle me-1"></i> Restricted</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>Kavach Savepoint Sandbox</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-semibold">Google OR-Tools Timetable Scheduler</td>
+                                                <td>
+                                                    {% if user.role in ['organiser', 'supervisor'] %}
+                                                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Full Access</span>
+                                                    {% else %}
+                                                    <span class="text-muted"><i class="bi bi-x-circle me-1"></i> View Only</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>Zero Room Collision Enforcement</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-semibold">Dean Approval & Budget Escalation</td>
+                                                <td>
+                                                    {% if user.role == 'supervisor' %}
+                                                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Approval Authority</span>
+                                                    {% else %}
+                                                    <span class="text-warning fw-semibold"><i class="bi bi-clock me-1"></i> Submission Only</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>Required for Budgets &gt; &#8377;25,000</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-semibold">Campus Logistics & Stock Quotas</td>
+                                                <td>
+                                                    {% if user.role in ['data_manager', 'supervisor'] %}
+                                                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Full CRUD & CSV</span>
+                                                    {% elif user.role == 'organiser' %}
+                                                    <span class="text-primary fw-semibold"><i class="bi bi-cart me-1"></i> Requisition Only</span>
+                                                    {% else %}
+                                                    <span class="text-muted"><i class="bi bi-x-circle me-1"></i> Restricted</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>Flipkart Seller-Hub Integration</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-semibold">QR Gate Pass & Personal Agenda</td>
+                                                <td>
+                                                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Available</span>
+                                                </td>
+                                                <td>Verifiable SHA-256 Gate Codes</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-semibold">Executive PDF Report & QR Certs</td>
+                                                <td>
+                                                    {% if user.role in ['supervisor', 'organiser'] %}
+                                                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Generate & Issue</span>
+                                                    {% else %}
+                                                    <span class="text-primary fw-semibold"><i class="bi bi-download me-1"></i> Verify & Download</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>Public Verification URL</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Handle tab switching via URL query parameter
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab) {
+            const btn = document.getElementById('tab-' + tab + '-btn');
+            if (btn) {
+                const tabTrigger = new bootstrap.Tab(btn);
+                tabTrigger.show();
+            }
+        }
+    });
+</script>
+{% endblock %}
