@@ -3,8 +3,13 @@ Autonomous Event Architect & Universal Command Agent Service.
 Translates plain natural language instructions into end-to-end operational execution:
 Database creation, Kavach-guarded resource requisition, Google OR-Tools scheduling,
 Flyer generation, and Outbox notice staging.
+
+Supports Multilingual Natural Language:
+1. Gemini API (100+ languages: Hindi, Hinglish, Tamil, Telugu, Bengali, French, etc.) when GEMINI_API_KEY is present.
+2. High-precision Bilingual (English + Hinglish + Hindi Devanagari) deterministic engine for zero-failure offline evaluation.
 """
 
+import os
 import re
 import uuid
 import json
@@ -19,30 +24,74 @@ from backend.services.analytics_service import issue_verifiable_certificate, get
 
 logger = logging.getLogger(__name__)
 
+def parse_with_gemini_api(prompt: str) -> Optional[Dict[str, Any]]:
+    """
+    Calls Google Gemini API (gemini-2.5-flash / gemini-1.5-flash) when GEMINI_API_KEY is available.
+    Supports 100+ languages (Hindi, Hinglish, Tamil, French, Spanish, etc.) with structured JSON output.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return None
+
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+
+        system_instruction = (
+            "You are an academic event coordinator AI for Galgotias University. "
+            "Extract structured parameters from the user prompt in any language (English, Hindi, Hinglish, Tamil, etc.). "
+            "Return valid JSON with keys: event_name (string), brief (string), event_type (hackathon|workshop|cultural|conference|seminar), "
+            "domain (string), headcount (integer, default 120), budget (integer, default 25000), "
+            "needs_food (boolean), needs_sound (boolean), needs_projector (boolean), needs_power (boolean)."
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config={"system_instruction": system_instruction, "response_mime_type": "application/json"}
+        )
+
+        data = json.loads(response.text)
+        data["raw_prompt"] = prompt
+        return data
+    except Exception as e:
+        logger.warning(f"Gemini API parse fallback to bilingual engine: {e}")
+        return None
+
 def parse_natural_language_event_prompt(prompt: str) -> Dict[str, Any]:
     """
-    Intelligently decomposes a free-form event prompt into structured parameters.
-    Extracts headcount, budget, duration, event type, domain/topics, and equipment.
+    Intelligently decomposes an event prompt into structured parameters.
+    Checks Gemini API first; falls back to comprehensive Bilingual (English + Hinglish + Hindi) parser.
     """
+    # 1. Try Gemini API first if configured
+    gemini_result = parse_with_gemini_api(prompt)
+    if gemini_result and isinstance(gemini_result, dict) and "headcount" in gemini_result:
+        return gemini_result
+
+    # 2. Comprehensive Bilingual (English + Hinglish + Hindi) Deterministic Engine
     p_lower = prompt.lower()
 
-    # 1. Headcount detection (e.g. "150 students", "200 pax", "for 100 people")
+    # Headcount detection (English: students, pax, people; Hinglish: bacho, baccho, logo; Hindi: छात्र, लोग)
     headcount = 120
-    headcount_match = re.search(r'(\d+)\s*(students|participants|people|pax|attendees|delegates|seats)', p_lower)
+    headcount_match = re.search(
+        r'(\d+)\s*(students?|participants?|people|pax|attendees?|delegates?|seats?|bacho|bachon|baccho|bacche|log|logo|logon|chatro|chatron|छात्र|लोग|विद्यार्थी)',
+        p_lower
+    )
     if headcount_match:
         headcount = int(headcount_match.group(1))
     else:
+        # Check plain numbers in prompt
         num_match = re.search(r'\b(50|80|100|120|150|200|250|300|500)\b', p_lower)
         if num_match:
             headcount = int(num_match.group(1))
 
-    # 2. Budget detection (e.g. "35k budget", "budget 20000", "₹25000", "20k")
+    # Budget detection (English: budget, 35k; Hinglish: 35 hazar, 35k kharcha, paise; Hindi: 35 हजार, रुपये, बजट)
     budget = 25000
-    k_match = re.search(r'\b(\d+)\s*k\b', p_lower)
+    k_match = re.search(r'\b(\d+)\s*(?:k|hazar|hazaar|हजार)\b', p_lower)
     if k_match:
         budget = int(k_match.group(1)) * 1000
     else:
-        budget_match = re.search(r'(?:budget|cost|price|within|limit|rs\.?|inr|₹)\s*[:=]?\s*(\d[\d,]*)', p_lower)
+        budget_match = re.search(r'(?:budget|cost|price|within|limit|rs\.?|inr|₹|kharcha|paise|rupaye|rupees|बजट|रुपये)\s*[:=]?\s*(\d[\d,]*)', p_lower)
         if budget_match:
             cleaned = budget_match.group(1).replace(",", "")
             if cleaned.isdigit():
@@ -54,27 +103,27 @@ def parse_natural_language_event_prompt(prompt: str) -> Dict[str, Any]:
                     budget = val
                     break
 
-    # 3. Event Type detection
+    # Event Type detection (English + Hinglish + Hindi)
     event_type = "workshop"
-    if any(k in p_lower for k in ["hackathon", "coding", "hack"]):
+    if any(k in p_lower for k in ["hackathon", "coding", "hack", "हैकाथॉन"]):
         event_type = "hackathon"
-    elif any(k in p_lower for k in ["cultural", "dance", "music", "fest", "drama", "arts"]):
+    elif any(k in p_lower for k in ["cultural", "dance", "music", "fest", "drama", "arts", "nach", "gana", "sanskriti", "सांस्कृतिक", "नृत्य", "त्यौहार"]):
         event_type = "cultural"
-    elif any(k in p_lower for k in ["conference", "summit", "symposium"]):
+    elif any(k in p_lower for k in ["conference", "summit", "symposium", "सम्मेलन"]):
         event_type = "conference"
-    elif any(k in p_lower for k in ["seminar", "guest lecture", "webinar"]):
+    elif any(k in p_lower for k in ["seminar", "guest lecture", "webinar", "bhashan"]):
         event_type = "seminar"
 
-    # 4. Domain / Title extraction
-    if "robotics" in p_lower:
+    # Domain / Title extraction
+    if any(k in p_lower for k in ["robotics", "robot", "रोबोटिक्स"]):
         domain = "Robotics & Autonomous Systems"
-    elif "ai" in p_lower or "artificial intelligence" in p_lower or "genai" in p_lower:
+    elif any(k in p_lower for k in ["ai", "artificial intelligence", "genai", "machine learning", "एआई"]):
         domain = "Generative AI & Machine Learning"
-    elif "dance" in p_lower or "music" in p_lower:
+    elif any(k in p_lower for k in ["dance", "music", "drama", "arts", "sangeet", "संगीत"]):
         domain = "Performing Arts & Cultural Evening"
-    elif "web3" in p_lower or "blockchain" in p_lower:
+    elif any(k in p_lower for k in ["web3", "blockchain", "crypto"]):
         domain = "Web3 & Blockchain Technologies"
-    elif "cyber" in p_lower or "security" in p_lower:
+    elif any(k in p_lower for k in ["cyber", "security", "cloud"]):
         domain = "Cyber Security & Cloud Defense"
     else:
         domain = "Innovation & Academic Excellence"
@@ -82,11 +131,11 @@ def parse_natural_language_event_prompt(prompt: str) -> Dict[str, Any]:
     event_name = f"Campus {domain} {event_type.capitalize()}"
     brief = f"Autonomous campus event planned for {headcount} participants focusing on {domain}. Automated allocation with clash-free scheduling."
 
-    # 5. Equipment & Catering needs
-    needs_food = any(k in p_lower for k in ["dinner", "lunch", "food", "refreshment", "snack", "catering", "meals"])
-    needs_sound = any(k in p_lower for k in ["sound", "mic", "microphone", "audio", "speaker system", "stage"])
-    needs_projector = any(k in p_lower for k in ["projector", "screen", "display", "presentation", "slides"])
-    needs_power = any(k in p_lower for k in ["power", "spike", "extension", "charging", "chargers"])
+    # Equipment & Catering needs (English: dinner, lunch, sound, mic; Hinglish: khana, nashta, awaz; Hindi: भोजन, खाना, नाश्ता, माइक)
+    needs_food = any(k in p_lower for k in ["dinner", "lunch", "food", "refreshment", "snack", "catering", "meals", "khana", "nashta", "bhojan", "chai", "samosa", "खाना", "नाश्ता", "भोजन"])
+    needs_sound = any(k in p_lower for k in ["sound", "mic", "microphone", "audio", "speaker", "awaz", "stage", "माइक", "ध्वनि"])
+    needs_projector = any(k in p_lower for k in ["projector", "screen", "display", "presentation", "slides", "स्क्रीन", "प्रोजेक्टर"])
+    needs_power = any(k in p_lower for k in ["power", "spike", "extension", "charging", "chargers", "bijli", "बोर्ड", "बिजली"])
 
     return {
         "event_name": event_name,
@@ -109,8 +158,8 @@ def execute_autonomous_event_genesis(
 ) -> Dict[str, Any]:
     """
     Main Autonomous Agent Pipeline:
-    Converts 1 prompt into a fully planned, allocated, scheduled, and notified campus event.
-    Guaranteed by Kavach Safety Invariants and Google OR-Tools CP-SAT.
+    Converts 1 prompt in any language (English, Hindi, Hinglish) into a fully planned,
+    allocated, scheduled, and notified campus event.
     """
     timeline: List[Dict[str, Any]] = []
 
@@ -119,7 +168,7 @@ def execute_autonomous_event_genesis(
     timeline.append({
         "step": 1,
         "tool": "nlp_brief_decomposer",
-        "title": "Natural Language Goal Parsing",
+        "title": "Multilingual Goal Parsing",
         "status": "COMPLETED",
         "summary": f"Identified '{params['event_name']}' ({params['event_type']}) for {params['headcount']} attendees with ₹{params['budget']:,} budget limit."
     })
@@ -132,7 +181,6 @@ def execute_autonomous_event_genesis(
     end_time_str = f"{target_date} 17:00:00"
 
     available_rooms = get_scheduling_rooms()
-    # Check current bookings to avoid room overlaps
     booked_rooms = fetch_all("""
         SELECT DISTINCT room_id FROM bookings
         WHERE room_id IS NOT NULL AND status = 'confirmed'
@@ -151,7 +199,6 @@ def execute_autonomous_event_genesis(
                 chosen_room = r
                 break
     if not chosen_room:
-        # Shift date by 3 days if all halls are booked
         target_date = (datetime.now() + timedelta(days=day_offset + 3)).strftime("%Y-%m-%d")
         start_time_str = f"{target_date} 09:30:00"
         end_time_str = f"{target_date} 17:00:00"
@@ -327,21 +374,20 @@ def execute_autonomous_event_genesis(
 
 def execute_universal_command(command: str, user_role: str = "organiser") -> Dict[str, Any]:
     """
-    Executes on-the-fly natural language operational commands anywhere on the platform.
-    Directly writes to DB with audit log.
+    Executes on-the-fly natural language operational commands in English, Hinglish, or Hindi.
     """
     c_lower = command.lower().strip()
 
-    # 1. Add Venue command (e.g. "Add venue Sarabhai Space Lab with 220 seats in Block E Floor 2")
-    if "venue" in c_lower or "room" in c_lower or "auditorium" in c_lower:
-        if any(w in c_lower for w in ["add", "create", "new", "insert"]):
-            name_match = re.search(r'(?:venue|room|audi|auditorium)\s+([A-Za-z0-9\s\-]+?)(?:\s+with|\s+capacity|\s+in|\s+seats|$)', command, re.IGNORECASE)
+    # 1. Add Venue command (English: add venue; Hinglish: venue jodo, room banao; Hindi: नया हॉल जोड़ो)
+    if any(w in c_lower for w in ["venue", "room", "audi", "auditorium", "हॉल", "कमरा"]):
+        if any(w in c_lower for w in ["add", "create", "new", "insert", "jodo", "banao", "dalo", "rakho", "shamil", "जोड़ो", "बनाओ"]):
+            name_match = re.search(r'(?:venue|room|audi|auditorium|हॉल)\s+([A-Za-z0-9\s\-]+?)(?:\s+with|\s+capacity|\s+in|\s+seats|\s+seat|\s+ke|\s+में|$)', command, re.IGNORECASE)
             name = name_match.group(1).strip() if name_match else "Campus Innovation Hall"
 
-            cap_match = re.search(r'(\d+)\s*(?:seats|capacity|pax)?', c_lower)
+            cap_match = re.search(r'(\d+)\s*(?:seats|seat|capacity|pax|सीट)?', c_lower)
             capacity = int(cap_match.group(1)) if cap_match else 150
 
-            loc_match = re.search(r'(?:in|at|block|floor)\s+([A-Za-z0-9\s\-]+)', command, re.IGNORECASE)
+            loc_match = re.search(r'(?:in|at|block|floor|mein|में)\s+([A-Za-z0-9\s\-]+)', command, re.IGNORECASE)
             location = loc_match.group(1).strip() if loc_match else "Campus Tech Tower"
 
             room_id = f"room_{uuid.uuid4().hex[:8]}"
@@ -360,10 +406,10 @@ def execute_universal_command(command: str, user_role: str = "organiser") -> Dic
                 "data": {"id": room_id, "name": name, "capacity": capacity, "location": location}
             }
 
-    # 2. Add Equipment command (e.g. "Add equipment UltraHD Wireless HDMI Transmitter with quantity 8")
-    if any(w in c_lower for w in ["equipment", "item", "mic", "projector", "laptop", "cable", "strip", "transmitter"]):
-        if any(w in c_lower for w in ["add", "create", "new", "insert"]):
-            name_match = re.search(r'(?:equipment|item)\s+([A-Za-z0-9\s\-]+?)(?:\s+with|\s+quantity|\s+qty|\s+price|$)', command, re.IGNORECASE)
+    # 2. Add Equipment command (English: add equipment; Hinglish: item jodo, mic add karo; Hindi: उपकरण जोड़ो)
+    if any(w in c_lower for w in ["equipment", "item", "mic", "projector", "laptop", "cable", "strip", "transmitter", "उपकरण"]):
+        if any(w in c_lower for w in ["add", "create", "new", "insert", "jodo", "banao", "dalo", "जोड़ो", "बनाओ"]):
+            name_match = re.search(r'(?:equipment|item|उपकरण)\s+([A-Za-z0-9\s\-]+?)(?:\s+with|\s+quantity|\s+qty|\s+price|$)', command, re.IGNORECASE)
             name = name_match.group(1).strip() if name_match else "4K Digital Projector"
 
             qty_match = re.search(r'(?:quantity|qty|stock|count)?\s*(\d+)', c_lower)
@@ -385,8 +431,8 @@ def execute_universal_command(command: str, user_role: str = "organiser") -> Dic
                 "data": {"id": res_id, "name": name, "category": "equipment", "stock": quantity}
             }
 
-    # 3. Analytics & Turnout query (e.g. "Show turnout rate and registered count summary")
-    if any(w in c_lower for w in ["turnout", "attendance", "analytics", "kpi", "stats", "summary"]):
+    # 3. Analytics & Turnout query (English: turnout, attendance; Hinglish: kitne log aaye, haziri; Hindi: उपस्थिति)
+    if any(w in c_lower for w in ["turnout", "attendance", "analytics", "kpi", "stats", "summary", "kitne", "haziri", "उपस्थिति"]):
         data = get_analytics_dashboard_data()
         return {
             "success": True,
@@ -395,9 +441,9 @@ def execute_universal_command(command: str, user_role: str = "organiser") -> Dic
             "data": data
         }
 
-    # 4. Certificate generation (e.g. "Generate certificate for Aryan Saxena")
-    if "certificate" in c_lower or "cert" in c_lower:
-        name_match = re.search(r'(?:for|to|student)\s+([A-Za-z\s]+)', command, re.IGNORECASE)
+    # 4. Certificate generation (English: generate certificate; Hinglish: certificate banao; Hindi: प्रमाण पत्र बनाओ)
+    if any(w in c_lower for w in ["certificate", "cert", "praman patra", "प्रमाण पत्र"]):
+        name_match = re.search(r'(?:for|to|student|ka|ke|liye|का|के लिए)\s+([A-Za-z\s]+)', command, re.IGNORECASE)
         student_name = name_match.group(1).strip() if name_match else "Himanshu Sharma"
         ev = fetch_one("SELECT id FROM events LIMIT 1")
         ev_id = ev["id"] if ev else "ev_001"
