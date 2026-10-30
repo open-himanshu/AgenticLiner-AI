@@ -47,6 +47,10 @@ from backend.services.analytics_service import (
     issue_verifiable_certificate,
     verify_certificate_by_id
 )
+from backend.services.agentic_genesis_service import (
+    execute_autonomous_event_genesis,
+    execute_universal_command
+)
 from backend.api.dependencies import require_auth, require_role, get_session_user
 
 app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
@@ -151,6 +155,14 @@ class CertificateGenerateRequest(BaseModel):
     student_name: str
     event_id: str = "ev_001"
     event_name: str = "Galgotias Campus Innovation Hackathon"
+
+class AgentGenesisRequest(BaseModel):
+    prompt: str
+    organizer_email: Optional[str] = "organiser@galgotias.edu"
+    organizer_department: Optional[str] = "School of Computing Science"
+
+class UniversalCommandRequest(BaseModel):
+    command: str
 
 # --- HTML Page Routes with Strict RBAC (Server-rendered Jinja2 UI) ---
 
@@ -527,6 +539,22 @@ async def download_executive_report_pdf(event_id: str):
         media_type="application/pdf",
         filename=f"Executive_Report_{event_id}.pdf"
     )
+
+@app.post("/api/agent/genesis")
+async def api_agent_genesis(req: AgentGenesisRequest):
+    """End-to-end autonomous event auto-genesis from one natural language prompt."""
+    res = execute_autonomous_event_genesis(
+        prompt=req.prompt,
+        organizer_email=req.organizer_email or "organiser@galgotias.edu",
+        organizer_department=req.organizer_department or "School of Computing Science"
+    )
+    return JSONResponse(content=res)
+
+@app.post("/api/agent/universal-command")
+async def api_universal_command(req: UniversalCommandRequest):
+    """Executes on-the-fly natural language operational commands anywhere on campus platform."""
+    res = execute_universal_command(command=req.command)
+    return JSONResponse(content=res)
 
 @app.post("/api/autopilot/run")
 @app.post("/agent/run")

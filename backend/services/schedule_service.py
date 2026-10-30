@@ -69,14 +69,16 @@ def get_scheduling_rooms(custom_rooms: Optional[List[Dict[str, Any]]] = None) ->
         return custom_rooms
 
     db_rooms = fetch_all("SELECT id, name, capacity, location FROM rooms ORDER BY capacity DESC")
-    if db_rooms and len(db_rooms) >= 2:
-        return [dict(r) for r in db_rooms]
+    rooms_list = [dict(r) for r in db_rooms] if db_rooms else []
 
-    return [
-        {"id": "room_audi_a", "name": "Main Auditorium A (Block C)", "capacity": 300, "location": "C-Block Floor 1"},
-        {"id": "room_audi_b", "name": "Auditorium B (Mini Hall)", "capacity": 150, "location": "A-Block Floor 2"},
-        {"id": "room_lab_ai", "name": "Advanced AI & Robotics Lab", "capacity": 60, "location": "Tech Tower Floor 3"}
-    ]
+    # Ensure there is at least one large hall capable of holding 250+ attendees for Keynotes
+    if not any(r.get("capacity", 0) >= 250 for r in rooms_list):
+        rooms_list.insert(0, {"id": "room_audi_a", "name": "Main Auditorium A (Block C)", "capacity": 300, "location": "C-Block Floor 1"})
+
+    if len(rooms_list) < 2:
+        rooms_list.append({"id": "room_audi_b", "name": "Auditorium B (Mini Hall)", "capacity": 150, "location": "A-Block Floor 2"})
+
+    return rooms_list
 
 def solve_timetable(
     sessions: Optional[List[Dict[str, Any]]] = None,
